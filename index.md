@@ -1,7 +1,10 @@
 # Comp Sci 30 Stuff
 
 ## Demos
-- I'll put the first one here
+- [Circles On Screen](02-Circles)
 
 ## Projects
 - First assignment here
+
+## Fun
+- [Bouncy Balls](bouncy-balls)
