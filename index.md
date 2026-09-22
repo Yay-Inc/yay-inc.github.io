@@ -1,10 +1,11 @@
 # Comp Sci 30 Stuff
 
 ## Demos
-- [Circles On Screen](02-Circles)
+- [Circles On Screen](02-circles)
+- [Square Around Edge of Screen](03-square)
 
 ## Projects
-- First assignment here
+- [Interactive Scene: World](world)
 
 ## Fun
 - [Bouncy Balls](bouncy-balls)
