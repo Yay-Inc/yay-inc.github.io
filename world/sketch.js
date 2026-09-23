@@ -6,14 +6,17 @@
 // - describe what you did to take this project "above and beyond"
 
 let dirtImg;
-let canyonImg;
+let panos = [];
+let panoNum = 0;
 
 let cam;
 
 
 async function setup() {
   dirtImg = await loadImage("assets/dirt-texture.jpg");
-  canyonImg = await loadImage("assets/grand-canyon-panorama.jpg");
+  panos.push(await loadImage("assets/desert-pano.jpg"));
+  panos.push(await loadImage("assets/grass-pano.jpg"));
+  panos.push(await loadImage("assets/tundra-pano.png"));
   
   createCanvas(windowWidth, windowHeight, WEBGL);
 
@@ -22,16 +25,33 @@ async function setup() {
 }
 
 function draw() {
+  resizeCanvas(windowWidth, windowHeight);
+  
   background(220);
   lights();
-  panorama(canyonImg);
-  orbitControl();
+  panorama(panos[panoNum]);
+  // orbitControl();
 
   updateCam();
   setCamera(cam);
 
   scene();
 
+}
+
+function keyPressed() {
+  if (key === "b") {
+    if (panoNum < panos.length - 1) {
+      panoNum++;
+    }
+    else {
+      panoNum = 0;
+    }
+  }
+}
+
+function mouseMoved(event) {
+  cam.tilt(10 / event.movementY);
 }
 
 function updateCam() {
