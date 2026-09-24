@@ -9,7 +9,14 @@ let dirtImg;
 let panos = [];
 let panoNum = 0;
 
+let paused = true;
+
 let cam;
+let x = 0;
+let y = 0;
+let sensitivity = 1;
+let fov = 75;
+let youSize = 200;
 
 
 async function setup() {
@@ -20,8 +27,10 @@ async function setup() {
   
   createCanvas(windowWidth, windowHeight, WEBGL);
 
+  angleMode(DEGREES);
+
   cam = createCamera();
-  cam.setPosition(0, -100, 0);
+  cam.setPosition(x, -youSize, y);
 }
 
 function draw() {
@@ -32,8 +41,9 @@ function draw() {
   panorama(panos[panoNum]);
   // orbitControl();
 
-  updateCam();
   setCamera(cam);
+  cam.perspective(fov);
+  updateCam();
 
   scene();
 
@@ -48,14 +58,34 @@ function keyPressed() {
       panoNum = 0;
     }
   }
+  else if (key === "Escape" && !paused) {
+    paused = true;
+    exitPointerLock();
+  }
+  else if (key === "i" && fov < 120) {
+    fov += 5;
+    console.log(fov);
+  }
+  else if (key === "k" && fov > 25) {
+    fov -= 5;
+    console.log(fov);
+  }
 }
 
-function mouseMoved(event) {
-  cam.tilt(10 / event.movementY);
+function doubleClicked() {
+  if (paused) {
+    paused = false;
+    requestPointerLock();
+  }
+  else {
+    paused = true;
+    exitPointerLock();
+  }
 }
 
 function updateCam() {
-
+  cam.pan(-movedX / 4 * sensitivity);
+  cam.tilt(movedY / 4 * sensitivity);
 }
 
 function scene() {
