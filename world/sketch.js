@@ -5,25 +5,35 @@
 // Extra for Experts:
 // - describe what you did to take this project "above and beyond"
 
+// https://www.philohome.com/skycollec/skycollec.htm
+
 let dirtImg;
-let panos = [];
-let panoNum = 0;
+let skies = [];
+let skyNum = 0;
 
 let paused = true;
 
 let cam;
+
 let x = 0;
 let y = 0;
-let sensitivity = 1;
-let fov = 75;
+let z = 0;
 let youSize = 200;
+let speedX = 0;
+let speedY = 0;
+let speedZ = 0;
+
+let sensitivity = 1;
+let renDis = 10000;
+let fov = 75;
 
 
 async function setup() {
   dirtImg = await loadImage("assets/dirt-texture.jpg");
-  panos.push(await loadImage("assets/desert-pano.jpg"));
-  panos.push(await loadImage("assets/grass-pano.jpg"));
-  panos.push(await loadImage("assets/tundra-pano.png"));
+  skies.push(await loadImage("assets/sky2.jpg"));
+  skies.push(await loadImage("assets/sky5.jpg"));
+  skies.push(await loadImage("assets/sky9.jpg"));
+  skies.push(await loadImage("assets/sky16.jpg"));
   
   createCanvas(windowWidth, windowHeight, WEBGL);
 
@@ -38,11 +48,9 @@ function draw() {
   
   background(220);
   lights();
-  panorama(panos[panoNum]);
+  strokeMode(SIMPLE);
   // orbitControl();
 
-  setCamera(cam);
-  cam.perspective(fov);
   updateCam();
 
   scene();
@@ -51,11 +59,11 @@ function draw() {
 
 function keyPressed() {
   if (key === "b") {
-    if (panoNum < panos.length - 1) {
-      panoNum++;
+    if (skyNum < skies.length - 1) {
+      skyNum++;
     }
     else {
-      panoNum = 0;
+      skyNum = 0;
     }
   }
   else if (key === "Escape" && !paused) {
@@ -84,13 +92,32 @@ function doubleClicked() {
 }
 
 function updateCam() {
+  // cam.
+  
   cam.pan(-movedX / 4 * sensitivity);
   cam.tilt(movedY / 4 * sensitivity);
+  
+  cam.perspective(fov, width / height, youSize / 4, renDis * 2);
+
+  setCamera(cam);
 }
 
 function scene() {
+  // Draw the sky
   push();
+  noStroke();
+  texture(skies[skyNum]);
+  sphere(renDis);
+  pop();
+  
+  // Draw the ground
+  push();
+  noStroke();
   texture(dirtImg);
-  box(10000, 1, 10000);
+  translate(0, 100, 0);
+  rotateX(90);
+  if (fov % 10 === 5) {
+    plane(renDis);
+  }
   pop();
 }
