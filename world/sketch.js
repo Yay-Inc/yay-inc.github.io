@@ -13,8 +13,6 @@ let skyNum = 0;
 
 let paused = true;
 
-let cam;
-
 let x = 0;
 let y = 0;
 let z = 0;
@@ -23,10 +21,12 @@ let speedX = 0;
 let speedY = 0;
 let speedZ = 0;
 
+let cam;
 let sensitivity = 1;
 let renDis = 10000;
 let fov = 75;
 
+let trees;
 
 async function setup() {
   dirtImg = await loadImage("assets/dirt-texture.jpg");
@@ -36,11 +36,12 @@ async function setup() {
   skies.push(await loadImage("assets/sky16.jpg"));
   
   createCanvas(windowWidth, windowHeight, WEBGL);
-
   angleMode(DEGREES);
 
   cam = createCamera();
-  cam.setPosition(x, -youSize, y);
+  cam.setPosition(x, y - youSize, z);
+
+  trees = Math.round(random(10, 40));
 }
 
 function draw() {
@@ -92,11 +93,14 @@ function doubleClicked() {
 }
 
 function updateCam() {
-  // cam.
+  
   
   cam.pan(-movedX / 4 * sensitivity);
-  cam.tilt(movedY / 4 * sensitivity);
   
+  if (cam.centerY < 795 + y - youSize && movedY > 0 || cam.centerY > -795 + y - youSize && movedY < 0) {
+    cam.tilt(movedY / 4 * sensitivity);
+  }
+
   cam.perspective(fov, width / height, youSize / 4, renDis * 2);
 
   setCamera(cam);
@@ -116,8 +120,18 @@ function scene() {
   texture(dirtImg);
   translate(0, 100, 0);
   rotateX(90);
-  if (fov % 10 === 5) {
-    plane(renDis);
-  }
+  plane(renDis);
   pop();
+
+  // Draw trees
+  for (let i = 0; i < trees; i++) {
+    let treeHeight = random(100, 250);
+
+    push();
+    noStroke();
+    translate(random(-renDis / 3, renDis / 3), -treeHeight / 2, random(-renDis / 3, renDis / 3));
+    fill("brown");
+    cylinder(treeHeight / 10, treeHeight);
+    pop();
+  }
 }
