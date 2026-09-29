@@ -16,7 +16,7 @@ let paused = true;
 let x = 0;
 let y = 0;
 let z = 0;
-let youSize = 200;
+let youSize = 50;
 let speedX = 0;
 let speedY = 0;
 let speedZ = 0;
@@ -26,7 +26,36 @@ let sensitivity = 1;
 let renDis = 10000;
 let fov = 75;
 
-let trees;
+let world;
+
+class World {
+  constructor(size) {
+    // this.trees = new Array(Math.floor(random(50, 200))).fill(new Map());
+
+    // for (let i = 0; i < this.trees.length; i++) {
+    //   let treeHeight = random(100, 500);
+    //   this.trees[i].set("treeHeight", treeHeight);
+    //   this.trees[i].set("treeWidth", random(treeHeight / 5, treeHeight / 1.5));
+    //   this.trees[i].set("x", random(-renDis / 10, renDis / 10) * 10);
+    //   this.trees[i].set("z", random(-renDis / 10, renDis / 10) * 10);
+    // }
+
+    this.trees = [];
+    let num = Math.floor(random(50, 200));
+    
+    for (let i = 0; i < num; i++) {
+      let tree = new Map();
+      let treeHeight = random(100, 500);
+      
+      tree.set("treeHeight", treeHeight);
+      tree.set("treeWidth", random(treeHeight / 5, treeHeight / 1.5));
+      tree.set("x", random(-renDis / 10, renDis / 10) * 10);
+      tree.set("z", random(-renDis / 10, renDis / 10) * 10);
+      
+      this.trees.push(tree);
+    }
+  }
+}
 
 async function setup() {
   dirtImg = await loadImage("assets/dirt-texture.jpg");
@@ -41,7 +70,7 @@ async function setup() {
   cam = createCamera();
   cam.setPosition(x, y - youSize, z);
 
-  trees = Math.round(random(10, 40));
+  world = new World(renDis);
 }
 
 function draw() {
@@ -117,21 +146,27 @@ function scene() {
   // Draw the ground
   push();
   noStroke();
+  // textureMode(NORMAL);
+  // textureWrap(MIRROR);
   texture(dirtImg);
   translate(0, 100, 0);
   rotateX(90);
-  plane(renDis);
+  plane(renDis * 2);
   pop();
 
   // Draw trees
-  for (let i = 0; i < trees; i++) {
-    let treeHeight = random(100, 250);
-
+  for (let i = 0; i < world.trees.length; i++) {
+    let tree = world.trees[i];
+    
     push();
     noStroke();
-    translate(random(-renDis / 3, renDis / 3), -treeHeight / 2, random(-renDis / 3, renDis / 3));
-    fill("brown");
-    cylinder(treeHeight / 10, treeHeight);
+    translate(tree.get("x"), 0, tree.get("z"));
+    fill(80, 50, 10);
+    cylinder(tree.get("treeHeight") / 10, tree.get("treeHeight"));
+
+    translate(0, -tree.get("treeHeight") / 2, 0);
+    fill(40, 100, 40);
+    cone(tree.get("treeWidth"), -tree.get("treeHeight"));
     pop();
   }
 }
