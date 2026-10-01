@@ -20,6 +20,7 @@ let youSize = 50;
 let speedX = 0;
 let speedY = 0;
 let speedZ = 0;
+let facing = 0;
 
 let cam;
 let sensitivity = 1;
@@ -30,16 +31,6 @@ let world;
 
 class World {
   constructor(size) {
-    // this.trees = new Array(Math.floor(random(50, 200))).fill(new Map());
-
-    // for (let i = 0; i < this.trees.length; i++) {
-    //   let treeHeight = random(100, 500);
-    //   this.trees[i].set("treeHeight", treeHeight);
-    //   this.trees[i].set("treeWidth", random(treeHeight / 5, treeHeight / 1.5));
-    //   this.trees[i].set("x", random(-renDis / 10, renDis / 10) * 10);
-    //   this.trees[i].set("z", random(-renDis / 10, renDis / 10) * 10);
-    // }
-
     this.trees = [];
     let num = Math.floor(random(50, 200));
     
@@ -79,16 +70,25 @@ function draw() {
   background(220);
   lights();
   strokeMode(SIMPLE);
-  // orbitControl();
 
+  checkMoveInput();
   updateCam();
 
   scene();
 
+  // crosshair - FIGURE OUT HOW TO DRAW ON TOP
+  // push();
+  // stroke(0);
+  // strokeWeight(4);
+  // circle(100, 100, 50);
+  // pop();
 }
 
-function keyPressed() {
-  if (key === "b") {
+function keyPressed() {  
+  if (key === " " && y === 0) {
+    speedY = -20;
+  }
+  else if (key === "b") {
     if (skyNum < skies.length - 1) {
       skyNum++;
     }
@@ -121,10 +121,57 @@ function doubleClicked() {
   }
 }
 
+function checkMoveInput() {
+  if (keyIsDown("w") || keyIsDown(UP_ARROW)) {
+    if (keyIsDown(SHIFT)) {
+      speedZ = -20;
+    }
+    else {
+      speedZ = -10;
+    }
+  }
+  else if (keyIsDown("s") || keyIsDown(DOWN_ARROW)) {
+    speedZ = 10;
+  }
+  else {
+    if (speedZ !== 0) {
+      speedZ -= speedZ / Math.abs(speedZ);
+    }
+  }
+
+  if (keyIsDown("a") || keyIsDown(LEFT_ARROW)) {
+    speedX = -8;
+  }
+  else if (keyIsDown("d") || keyIsDown(RIGHT_ARROW)) {
+    speedX = 8;
+  }
+  else {
+    if (speedX !== 0) {
+      speedX -= speedX / Math.abs(speedX);
+    }
+  }
+
+  let rotated = createVector(speedX, speedZ);
+  rotated.rotate(-facing);
+
+  x += rotated.x;
+  y += speedY;
+  z += rotated.y;
+
+  if (y !== 0) {
+    speedY += 1;
+  }
+  else {
+    speedY = 0;
+  }
+}
+
 function updateCam() {
-  
+  cam.setPosition(x, y, z);
   
   cam.pan(-movedX / 4 * sensitivity);
+  facing += -movedX / 4 * sensitivity;
+  facing = facing % 360;
   
   if (cam.centerY < 795 + y - youSize && movedY > 0 || cam.centerY > -795 + y - youSize && movedY < 0) {
     cam.tilt(movedY / 4 * sensitivity);
@@ -146,8 +193,6 @@ function scene() {
   // Draw the ground
   push();
   noStroke();
-  // textureMode(NORMAL);
-  // textureWrap(MIRROR);
   texture(dirtImg);
   translate(0, 100, 0);
   rotateX(90);
