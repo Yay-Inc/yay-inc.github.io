@@ -8,7 +8,7 @@
 
 // Where I got sky equirectangular photos: https://www.philohome.com/skycollec/skycollec.htm
 
-let graphics;
+let canvas;
 let dirtImg;
 let skies = [];
 let skyNum = 0;
@@ -59,14 +59,8 @@ async function setup() {
   skies.push(await loadImage("assets/sky9.jpg"));
   skies.push(await loadImage("assets/sky16.jpg"));
   
-  createCanvas(windowWidth, windowHeight, WEBGL);
-  graphics = createGraphics(windowWidth, windowHeight);
+  canvas = createCanvas(windowWidth, windowHeight);
   angleMode(DEGREES);
-
-  // Create camera
-  cam = createCamera();
-  cam.setPosition(x, y - youSize, z);
-  cam.perspective(fov, width / height, 0.01, RENDIS * 2);
 
   // Generate world
   world = new World(RENDIS);
@@ -74,21 +68,18 @@ async function setup() {
 
 function draw() {
   resizeCanvas(windowWidth, windowHeight);
-  graphics.resizeCanvas(windowWidth, windowHeight);
   
-  lights();
-  strokeMode(SIMPLE);
-
   // Check if paused
   if (!paused) {
+    lights();
+    strokeMode(SIMPLE);
     checkMoveInput();
     updateCam();
+    scene();
   }
   else {
     pauseScreen();
   }
-
-  scene();
 }
 
 function keyPressed() {  
@@ -102,11 +93,9 @@ function keyPressed() {
     }
   }
 
-  // Pause (doesn't really work because browser takes escape input to exit 
-  //        pointer lock so you have to press escape twice for this code to run)
-  else if (key === "Escape" && !paused) {
-    paused = true;
-    exitPointerLock();
+  // Pause
+  else if (key === "e") {
+    doubleClicked();
   }
 
   // Increase FOV
@@ -125,10 +114,23 @@ function keyPressed() {
 function doubleClicked() {
   // Browsers require a mouse input to lock pointer
   if (paused) {
+    canvas.remove();
+    canvas = createCanvas(windowWidth, windowHeight, WEBGL);
+
+    // Create camera only first time
+    if (cam === undefined) {
+      cam = createCamera();
+      cam.setPosition(x, y - youSize, z);
+      cam.perspective(fov, width / height, 0.01, RENDIS * 2);
+    }
+
     paused = false;
     requestPointerLock();
   }
   else {
+    canvas.remove();
+    canvas = createCanvas(windowWidth, windowHeight);
+    
     paused = true;
     exitPointerLock();
   }
@@ -136,7 +138,7 @@ function doubleClicked() {
 
 function checkMoveInput() {
   // Forward and Back
-  if (keyIsDown("w") || keyIsDown(UP_ARROW)) {
+  if (keyIsDown("w") || keyIsDown("W") || keyIsDown(UP_ARROW)) {
     // Sprint
     if (keyIsDown(SHIFT)) {
       speedZ = -20;
@@ -146,7 +148,7 @@ function checkMoveInput() {
       speedZ = -10;
     }
   }
-  else if (keyIsDown("s") || keyIsDown(DOWN_ARROW)) {
+  else if (keyIsDown("s") || keyIsDown("S") || keyIsDown(DOWN_ARROW)) {
     speedZ = 10;
   }
   else {
@@ -157,10 +159,10 @@ function checkMoveInput() {
   }
 
   // Strafe
-  if (keyIsDown("a") || keyIsDown(LEFT_ARROW)) {
+  if (keyIsDown("a") || keyIsDown("A") || keyIsDown(LEFT_ARROW)) {
     speedX = -8;
   }
-  else if (keyIsDown("d") || keyIsDown(RIGHT_ARROW)) {
+  else if (keyIsDown("d") || keyIsDown("D") || keyIsDown(RIGHT_ARROW)) {
     speedX = 8;
   }
   else {
@@ -211,17 +213,17 @@ function updateCam() {
 }
 
 function pauseScreen() {
-  graphics.circle(windowWidth / 2, windowHeight / 2, 50);
-  
-  push();
-  noStroke();
-  texture(graphics);
-  
-  cam.lookAt(0, 0, 0);
+  background(150);
+  textAlign(CENTER);
+  textSize(60);
+  text("PAUSED", windowWidth / 2, windowHeight / 3);
 
-  translate(cam.eyeX, cam.eyeY, cam.eyeZ);
-  plane(windowWidth, windowHeight);
-  pop();
+  textSize(30);
+  text("Controls:", windowWidth / 2, windowHeight / 3 + 50);
+
+  textSize(20);
+  text("E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nShift key = Sprint\nB = Cycle sky\nI/K = Raise/Lower FOV", 
+    windowWidth / 2, windowHeight / 3 + 100);
 }
 
 function scene() {
