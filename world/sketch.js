@@ -38,13 +38,12 @@ class World {
     
     // Add trees with random dimensions
     for (let i = 0; i < num; i++) {
-      let tree = new Map();
-      let treeHeight = random(100, 500);
+      let tree = {};
+      tree.treeHeight = random(100, 500);
       
-      tree.set("treeHeight", treeHeight);
-      tree.set("treeWidth", random(treeHeight / 5, treeHeight / 1.5));
-      tree.set("x", random(-RENDIS / 10, RENDIS / 10) * 10);
-      tree.set("z", random(-RENDIS / 10, RENDIS / 10) * 10);
+      tree.treeWidth = random(tree.treeHeight / 5, tree.treeHeight / 1.5);
+      tree.x = random(-RENDIS / 10, RENDIS / 10) * 10;
+      tree.z = random(-RENDIS / 10, RENDIS / 10) * 10;
       
       this.trees.push(tree);
     }
@@ -249,14 +248,14 @@ function scene() {
     // Trunk
     push();
     noStroke();
-    translate(tree.get("x"), -tree.get("treeHeight") / 2, tree.get("z"));
+    translate(tree.x, -tree.treeHeight / 2, tree.z);
     fill(80, 50, 10);
-    cylinder(tree.get("treeHeight") / 10, tree.get("treeHeight"));
+    cylinder(tree.treeHeight / 10, tree.treeHeight);
 
     // Leaves
-    translate(0, -tree.get("treeHeight") / 2 - 5, 0);
+    translate(0, -tree.treeHeight / 2 - 5, 0);
     fill(40, 100, 40);
-    cone(tree.get("treeWidth"), -tree.get("treeHeight"));
+    cone(tree.treeWidth, -tree.treeHeight);
     pop();
   }
 }
