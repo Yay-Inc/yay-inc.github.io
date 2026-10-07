@@ -66,8 +66,6 @@ async function setup() {
 }
 
 function draw() {
-  resizeCanvas(windowWidth, windowHeight);
-  
   // Check if paused
   if (!paused) {
     lights();
@@ -133,6 +131,10 @@ function doubleClicked() {
     paused = true;
     exitPointerLock();
   }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
 }
 
 function checkMoveInput() {
