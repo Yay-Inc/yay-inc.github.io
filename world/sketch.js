@@ -29,9 +29,23 @@ const RENDIS = 20000;
 let fov = 75;
 
 let world;
+const TERRAINHEIGHT = 1000;
+const TERRAINRES = 10;
 
 class World {
   constructor(size) {
+    // Generate terrain
+    this.terrain = [];
+
+    for (let i = 0; i < RENDIS * 2; i += TERRAINRES) {
+      let row = [];
+      for (let j = 0; j < RENDIS * 2; j += TERRAINRES) {
+        row.push(noise(i * 0.001, j * 0.001) * TERRAINHEIGHT);
+      }
+      this.terrain.push(row);
+    }
+
+    
     // Setup trees
     this.trees = [];
     let num = Math.floor(random(RENDIS / 200, RENDIS / 50));
