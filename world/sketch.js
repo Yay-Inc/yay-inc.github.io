@@ -29,8 +29,8 @@ const RENDIS = 20000;
 let fov = 75;
 
 let world;
-const TERRAINHEIGHT = 1000;
-const TERRAINRES = 10;
+const TERRAINHEIGHT = 3000;
+const TERRAINRES = 1000;
 
 class World {
   constructor(size) {
@@ -253,8 +253,20 @@ function scene() {
   push();
   noStroke();
   texture(dirtImg);
-  rotateX(90);
-  plane(RENDIS * 2);
+
+  beginShape(POINTS);
+
+  for (let i = 0; i < world.terrain.length; i++) {
+    for (let j = 0; j < world.terrain[i].length; j++) {
+      vertex(i * TERRAINRES - RENDIS, world.terrain[i][j] - TERRAINHEIGHT / 2, j * TERRAINRES - RENDIS);
+      // console.log(world.terrain[i][j]);
+    }
+  }
+
+  endShape();
+
+  // rotateX(90);
+  // plane(RENDIS * 2);
   pop();
 
   // Draw trees
