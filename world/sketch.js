@@ -15,9 +15,9 @@ let skyNum = 0;
 
 let paused = true;
 
-let x = 0;
-let y = 0;
-let z = 0;
+// let x = 0;
+// let y = 0;
+// let z = 0;
 let youSize = 50;
 let speedX = 0;
 let speedY = 0;
@@ -26,38 +26,57 @@ let speedZ = 0;
 let cam;
 let sensitivity = 1;
 const RENDIS = 20000;
-let fov = 75;
+let shared;
 
 let world;
-const TERRAINHEIGHT = 3000;
-const TERRAINRES = 1000;
+const SEED = 1;
+const TERRAINHEIGHT = 2000;
+const TERRAINRES = 200;
+const MOD = 0.0002;
 
 class World {
   constructor(size) {
     // Generate terrain
-    this.terrain = [];
+    let terrain = new p5.Geometry();
+    const side = size * 2 / TERRAINRES;
 
-    for (let i = 0; i < RENDIS * 2; i += TERRAINRES) {
-      let row = [];
-      for (let j = 0; j < RENDIS * 2; j += TERRAINRES) {
-        row.push(noise(i * 0.001, j * 0.001) * TERRAINHEIGHT);
+    // Get vertices from noise
+    for (let i = 0; i < size * 2; i += TERRAINRES) {
+      for (let j = 0; j < size * 2; j += TERRAINRES) {
+        terrain.vertices.push(createVector(i - size, noise(i * MOD, j * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2, j - size));
       }
-      this.terrain.push(row);
     }
 
+    // Stitch faces together
+    for (let i = 0; i < side - 1; i++) {
+      for (let j = 0; j < side - 1; j++) {
+        terrain.faces.push([i * side + j, 
+          i * side + j + 1, 
+          i * side + j + side]);
+        terrain.faces.push([i * side + j + 1 + side, 
+          i * side + j + 1, 
+          i * side + j + side]);
+      }
+    }
+
+    //terrain.makeEdgesFromFaces();
+    terrain.computeNormals();
+
+    this.terrain = terrain;
     
     // Setup trees
     this.trees = [];
-    let num = Math.floor(random(RENDIS / 200, RENDIS / 50));
+    let num = Math.floor(random(size / 200, size / 50));
     
     // Add trees with random dimensions
     for (let i = 0; i < num; i++) {
       let tree = {};
-      tree.treeHeight = random(100, 500);
+      tree.treeHeight = random(300, 1000);
       
       tree.treeWidth = random(tree.treeHeight / 5, tree.treeHeight / 1.5);
-      tree.x = random(-RENDIS / 10, RENDIS / 10) * 10;
-      tree.z = random(-RENDIS / 10, RENDIS / 10) * 10;
+      tree.x = Math.floor(random(-size / TERRAINRES, size / TERRAINRES)) * TERRAINRES;
+      tree.z = Math.floor(random(-size / TERRAINRES, size / TERRAINRES)) * TERRAINRES;
+      tree.y = noise((tree.x + size) * MOD, (tree.z + size) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;//this.terrain.vertices[(tree.x + size) / TERRAINRES * side + (tree.z + size) / TERRAINRES].y;
       
       this.trees.push(tree);
     }
@@ -65,6 +84,20 @@ class World {
 }
 
 async function setup() {
+  // connect to a p5party server
+  partyConnect(
+    "wss://demoserver.p5party.org",
+    "world"
+  );
+  
+  // tell p5.party to sync the pos object
+  shared = partyLoadShared("shared", { fov: 75, x: 0, y: 100, z: 0 });
+
+  if (partyIsHost()) {
+		shared.fov = 75;
+    console.log("I'm HOST");
+	}
+  
   // Load ground and sky images
   dirtImg = await loadImage("assets/dirt-texture.jpg");
   skies.push(await loadImage("assets/sky2.jpg"));
@@ -75,6 +108,8 @@ async function setup() {
   canvas = createCanvas(windowWidth, windowHeight);
   angleMode(DEGREES);
 
+  noiseSeed(SEED);
+
   // Generate world
   world = new World(RENDIS);
 }
@@ -83,7 +118,6 @@ function draw() {
   // Check if paused
   if (!paused) {
     lights();
-    strokeMode(SIMPLE);
     checkMoveInput();
     updateCam();
     scene();
@@ -110,15 +144,15 @@ function keyPressed() {
   }
 
   // Increase FOV
-  else if (key === "i" && fov < 120) {
-    fov += 5;
-    console.log("FOV: " + fov);
+  else if (key === "i" && shared.fov < 120) {
+    shared.fov += 5;
+    console.log("FOV: " + shared.fov);
   }
 
   // Decrease FOV
-  else if (key === "k" && fov > 25) {
-    fov -= 5;
-    console.log("FOV: " + fov);
+  else if (key === "k" && shared.fov > 25) {
+    shared.fov -= 5;
+    console.log("FOV: " + shared.fov);
   }
 }
 
@@ -131,8 +165,8 @@ function doubleClicked() {
     // Create camera only first time
     if (cam === undefined) {
       cam = createCamera();
-      cam.setPosition(x, y - youSize, z);
-      cam.perspective(fov, width / height, 0.01, RENDIS * 2);
+      cam.setPosition(shared.x, shared.y - youSize, shared.z);
+      cam.perspective(shared.fov, width / height, 0.01, RENDIS * 2);
     }
 
     paused = false;
@@ -152,10 +186,12 @@ function windowResized() {
 }
 
 function checkMoveInput() {
+  const ground = noise((shared.x + RENDIS) * MOD, (shared.z + RENDIS) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
+  
   // Forward and Back
-  if (keyIsDown("w") || keyIsDown("W") || keyIsDown(UP_ARROW)) {
+  if (keyIsDown(87) || keyIsDown(UP_ARROW)) {
     // Sprint
-    if (keyIsDown(SHIFT)) {
+    if (keyIsDown(88)) {
       speedZ = -20;
     }
     // Walk
@@ -163,7 +199,7 @@ function checkMoveInput() {
       speedZ = -10;
     }
   }
-  else if (keyIsDown("s") || keyIsDown("S") || keyIsDown(DOWN_ARROW)) {
+  else if (keyIsDown(83) || keyIsDown(DOWN_ARROW)) {
     speedZ = 10;
   }
   else {
@@ -174,10 +210,10 @@ function checkMoveInput() {
   }
 
   // Strafe
-  if (keyIsDown("a") || keyIsDown("A") || keyIsDown(LEFT_ARROW)) {
+  if (keyIsDown(65) || keyIsDown(LEFT_ARROW)) {
     speedX = -8;
   }
-  else if (keyIsDown("d") || keyIsDown("D") || keyIsDown(RIGHT_ARROW)) {
+  else if (keyIsDown(68) || keyIsDown(RIGHT_ARROW)) {
     speedX = 8;
   }
   else {
@@ -188,7 +224,7 @@ function checkMoveInput() {
   }
   
   // Jump
-  if (keyIsDown(" ") && y === 0) {
+  if (keyIsDown(32) && shared.y >= ground - 20) {
     speedY = -20;
   }
 
@@ -199,30 +235,31 @@ function checkMoveInput() {
   let rotated = createVector(speedX, speedZ);
   rotated.rotate(dif.heading() - 90);
 
-  x += rotated.x;
-  y += speedY;
-  z += rotated.y;
+  shared.x += rotated.x;
+  shared.y += speedY;
+  shared.z += rotated.y;
 
   // Essentially gravity
-  if (y !== 0) {
+  if (shared.y < ground) {
     speedY += 1;
   }
   else {
     speedY = 0;
+    shared.y = ground;
   }
 }
 
 function updateCam() {
-  cam.setPosition(x, y - youSize, z);
+  cam.setPosition(shared.x, shared.y - youSize, shared.z);
   
   // Rotate camera based on mouse movements
   cam.pan(-movedX / 4 * sensitivity);
-  if (cam.centerY < 795 + y - youSize && movedY > 0 || cam.centerY > -795 + y - youSize && movedY < 0) {
+  if (cam.centerY < 795 + shared.y - youSize && movedY > 0 || cam.centerY > -795 + shared.y - youSize && movedY < 0) {
     cam.tilt(movedY / 4 * sensitivity);
   }
 
   // Update perspective
-  cam.perspective(fov, width / height, 0.01, RENDIS * 2);
+  cam.perspective(shared.fov, width / height, 0.01, RENDIS * 2);
 
   setCamera(cam);
 }
@@ -242,6 +279,8 @@ function pauseScreen() {
 }
 
 function scene() {
+  background(220);
+  
   // Draw the sky
   push();
   noStroke();
@@ -254,16 +293,7 @@ function scene() {
   noStroke();
   texture(dirtImg);
 
-  beginShape(POINTS);
-
-  for (let i = 0; i < world.terrain.length; i++) {
-    for (let j = 0; j < world.terrain[i].length; j++) {
-      vertex(i * TERRAINRES - RENDIS, world.terrain[i][j] - TERRAINHEIGHT / 2, j * TERRAINRES - RENDIS);
-      // console.log(world.terrain[i][j]);
-    }
-  }
-
-  endShape();
+  model(world.terrain);
 
   // rotateX(90);
   // plane(RENDIS * 2);
@@ -276,7 +306,7 @@ function scene() {
     // Trunk
     push();
     noStroke();
-    translate(tree.x, -tree.treeHeight / 2, tree.z);
+    translate(tree.x, tree.y - tree.treeHeight / 2 + 20, tree.z);
     fill(80, 50, 10);
     cylinder(tree.treeHeight / 10, tree.treeHeight);
 
