@@ -12,12 +12,11 @@ let canvas;
 let dirtImg;
 let skies = [];
 let skyNum = 0;
+let font;
 
 let paused = true;
 
-// let x = 0;
-// let y = 0;
-// let z = 0;
+let my = { x: 0, y: 0, z: 0, fov: 75 };
 let youSize = 50;
 let speedX = 0;
 let speedY = 0;
@@ -26,10 +25,11 @@ let speedZ = 0;
 let cam;
 let sensitivity = 1;
 const RENDIS = 20000;
+let guests;
 let shared;
 
 let world;
-const SEED = 1;
+const SEED = 2;
 const TERRAINHEIGHT = 2000;
 const TERRAINRES = 200;
 const MOD = 0.0002;
@@ -76,34 +76,35 @@ class World {
       tree.treeWidth = random(tree.treeHeight / 5, tree.treeHeight / 1.5);
       tree.x = Math.floor(random(-size / TERRAINRES, size / TERRAINRES)) * TERRAINRES;
       tree.z = Math.floor(random(-size / TERRAINRES, size / TERRAINRES)) * TERRAINRES;
-      tree.y = noise((tree.x + size) * MOD, (tree.z + size) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;//this.terrain.vertices[(tree.x + size) / TERRAINRES * side + (tree.z + size) / TERRAINRES].y;
+      tree.y = noise((tree.x + size) * MOD, (tree.z + size) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
       
       this.trees.push(tree);
     }
   }
 }
 
-async function setup() {
+function preload() {
   // connect to a p5party server
   partyConnect(
     "wss://demoserver.p5party.org",
     "world"
   );
   
-  // tell p5.party to sync the pos object
-  shared = partyLoadShared("shared", { fov: 75, x: 0, y: 100, z: 0 });
-
-  if (partyIsHost()) {
-		shared.fov = 75;
-    console.log("I'm HOST");
-	}
+  shared = partyLoadShared("shared", { seed: SEED, trees: [] });
+  my = partyLoadMyShared(my);
+  guests = partyLoadGuestShareds();
   
+}
+
+async function setup() {
   // Load ground and sky images
   dirtImg = await loadImage("assets/dirt-texture.jpg");
   skies.push(await loadImage("assets/sky2.jpg"));
   skies.push(await loadImage("assets/sky5.jpg"));
   skies.push(await loadImage("assets/sky9.jpg"));
   skies.push(await loadImage("assets/sky16.jpg"));
+
+  font = await loadFont("assets/Genjibold.otf");
   
   canvas = createCanvas(windowWidth, windowHeight);
   angleMode(DEGREES);
@@ -112,6 +113,9 @@ async function setup() {
 
   // Generate world
   world = new World(RENDIS);
+  if (partyIsHost()) {
+    shared.trees = world.trees;
+  }
 }
 
 function draw() {
@@ -144,15 +148,15 @@ function keyPressed() {
   }
 
   // Increase FOV
-  else if (key === "i" && shared.fov < 120) {
-    shared.fov += 5;
-    console.log("FOV: " + shared.fov);
+  else if (key === "i" && my.fov < 120) {
+    my.fov += 5;
+    console.log("FOV: " + my.fov);
   }
 
   // Decrease FOV
-  else if (key === "k" && shared.fov > 25) {
-    shared.fov -= 5;
-    console.log("FOV: " + shared.fov);
+  else if (key === "k" && my.fov > 25) {
+    my.fov -= 5;
+    console.log("FOV: " + my.fov);
   }
 }
 
@@ -160,13 +164,14 @@ function doubleClicked() {
   // Browsers require a mouse input to lock pointer
   if (paused) {
     canvas.remove();
+    canvas = undefined;
     canvas = createCanvas(windowWidth, windowHeight, WEBGL);
 
     // Create camera only first time
     if (cam === undefined) {
       cam = createCamera();
-      cam.setPosition(shared.x, shared.y - youSize, shared.z);
-      cam.perspective(shared.fov, width / height, 0.01, RENDIS * 2);
+      cam.setPosition(my.x, my.y - youSize, my.z);
+      cam.perspective(my.fov, width / height, 5, RENDIS * 2);
     }
 
     paused = false;
@@ -174,6 +179,7 @@ function doubleClicked() {
   }
   else {
     canvas.remove();
+    canvas = undefined;
     canvas = createCanvas(windowWidth, windowHeight);
     
     paused = true;
@@ -186,7 +192,7 @@ function windowResized() {
 }
 
 function checkMoveInput() {
-  const ground = noise((shared.x + RENDIS) * MOD, (shared.z + RENDIS) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
+  const ground = noise((my.x + RENDIS) * MOD, (my.z + RENDIS) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
   
   // Forward and Back
   if (keyIsDown(87) || keyIsDown(UP_ARROW)) {
@@ -224,7 +230,7 @@ function checkMoveInput() {
   }
   
   // Jump
-  if (keyIsDown(32) && shared.y >= ground - 20) {
+  if (keyIsDown(32) && my.y >= ground - 20) {
     speedY = -20;
   }
 
@@ -235,31 +241,31 @@ function checkMoveInput() {
   let rotated = createVector(speedX, speedZ);
   rotated.rotate(dif.heading() - 90);
 
-  shared.x += rotated.x;
-  shared.y += speedY;
-  shared.z += rotated.y;
+  my.x += rotated.x;
+  my.y += speedY;
+  my.z += rotated.y;
 
   // Essentially gravity
-  if (shared.y < ground) {
+  if (my.y < ground) {
     speedY += 1;
   }
   else {
     speedY = 0;
-    shared.y = ground;
+    my.y = ground;
   }
 }
 
 function updateCam() {
-  cam.setPosition(shared.x, shared.y - youSize, shared.z);
+  cam.setPosition(my.x, my.y - youSize, my.z);
   
   // Rotate camera based on mouse movements
   cam.pan(-movedX / 4 * sensitivity);
-  if (cam.centerY < 795 + shared.y - youSize && movedY > 0 || cam.centerY > -795 + shared.y - youSize && movedY < 0) {
+  if (cam.centerY < 795 + my.y - youSize && movedY > 0 || cam.centerY > -795 + my.y - youSize && movedY < 0) {
     cam.tilt(movedY / 4 * sensitivity);
   }
 
   // Update perspective
-  cam.perspective(shared.fov, width / height, 0.01, RENDIS * 2);
+  cam.perspective(my.fov, width / height, 30, RENDIS * 2);
 
   setCamera(cam);
 }
@@ -268,13 +274,15 @@ function pauseScreen() {
   background(150);
   textAlign(CENTER);
   textSize(60);
+  textFont(font);
+  fill(255);
   text("PAUSED", windowWidth / 2, windowHeight / 3);
 
   textSize(30);
   text("Controls:", windowWidth / 2, windowHeight / 3 + 50);
 
   textSize(20);
-  text("E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nShift key = Sprint\nB = Cycle sky\nI/K = Raise/Lower FOV", 
+  text("E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nX = Sprint\nB = Cycle sky\nI/K = Raise/Lower FOV", 
     windowWidth / 2, windowHeight / 3 + 100);
 }
 
@@ -292,16 +300,12 @@ function scene() {
   push();
   noStroke();
   texture(dirtImg);
-
   model(world.terrain);
-
-  // rotateX(90);
-  // plane(RENDIS * 2);
   pop();
 
   // Draw trees
-  for (let i = 0; i < world.trees.length; i++) {
-    let tree = world.trees[i];
+  for (let i = 0; i < shared.trees.length; i++) {
+    let tree = shared.trees[i];
     
     // Trunk
     push();
@@ -314,6 +318,18 @@ function scene() {
     translate(0, -tree.treeHeight / 2 - 5, 0);
     fill(40, 100, 40);
     cone(tree.treeWidth, -tree.treeHeight);
+    pop();
+  }
+
+  // Draw people
+  // console.log(guests);
+
+  for (const guest of guests) {
+    push()
+    noStroke();
+    translate(guest.x, guest.y - youSize / 2, guest.z);
+    fill("orange");
+    cylinder(youSize / 4, youSize);
     pop();
   }
 }
