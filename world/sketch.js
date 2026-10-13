@@ -93,20 +93,19 @@ function preload() {
   shared = partyLoadShared("shared", { seed: SEED, trees: [] });
   my = partyLoadMyShared(my);
   guests = partyLoadGuestShareds();
-  
+
+  // Load ground and sky images
+  dirtImg = loadImage("assets/dirt-texture.jpg");
+  skies.push(loadImage("assets/sky2.jpg"));
+  skies.push(loadImage("assets/sky5.jpg"));
+  skies.push(loadImage("assets/sky9.jpg"));
+  skies.push(loadImage("assets/sky16.jpg"));
+
+  font = loadFont("assets/Genjibold.otf");
 }
 
-async function setup() {
-  // Load ground and sky images
-  dirtImg = await loadImage("assets/dirt-texture.jpg");
-  skies.push(await loadImage("assets/sky2.jpg"));
-  skies.push(await loadImage("assets/sky5.jpg"));
-  skies.push(await loadImage("assets/sky9.jpg"));
-  skies.push(await loadImage("assets/sky16.jpg"));
-
-  font = await loadFont("assets/Genjibold.otf");
-  
-  canvas = createCanvas(windowWidth, windowHeight);
+function setup() {
+  canvas = createCanvas(windowWidth, windowHeight, WEBGL);
   angleMode(DEGREES);
 
   noiseSeed(SEED);
@@ -116,6 +115,10 @@ async function setup() {
   if (partyIsHost()) {
     shared.trees = world.trees;
   }
+
+  cam = createCamera();
+  cam.setPosition(my.x, my.y - youSize, my.z);
+  cam.perspective(my.fov, width / height, 5, RENDIS * 2);
 }
 
 function draw() {
@@ -163,24 +166,24 @@ function keyPressed() {
 function doubleClicked() {
   // Browsers require a mouse input to lock pointer
   if (paused) {
-    canvas.remove();
-    canvas = undefined;
-    canvas = createCanvas(windowWidth, windowHeight, WEBGL);
+    // canvas.remove();
+    // canvas = undefined;
+    // canvas = createCanvas(windowWidth, windowHeight, WEBGL);
 
-    // Create camera only first time
-    if (cam === undefined) {
-      cam = createCamera();
-      cam.setPosition(my.x, my.y - youSize, my.z);
-      cam.perspective(my.fov, width / height, 5, RENDIS * 2);
-    }
+    // // Create camera only first time
+    // if (cam === undefined) {
+    //   cam = createCamera();
+    //   cam.setPosition(my.x, my.y - youSize, my.z);
+    //   cam.perspective(my.fov, width / height, 5, RENDIS * 2);
+    // }
 
     paused = false;
     requestPointerLock();
   }
   else {
-    canvas.remove();
-    canvas = undefined;
-    canvas = createCanvas(windowWidth, windowHeight);
+    // canvas.remove();
+    // canvas = undefined;
+    // canvas = createCanvas(windowWidth, windowHeight);
     
     paused = true;
     exitPointerLock();
@@ -276,6 +279,17 @@ function pauseScreen() {
   textSize(60);
   textFont(font);
   fill(255);
+  
+  let pan = atan2(cam.eyeZ - cam.centerZ, cam.eyeX - cam.centerX);
+  let tilt = atan2(cam.eyeY - cam.centerY, dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ));
+  
+  translate(cam.eyeX, cam.eyeY, cam.eyeZ);
+  rotateY(-pan);
+  rotateZ(tilt + 180);
+  translate(200, 0, 0);
+  rotateY(-90);
+  rotateZ(180);
+  
   text("PAUSED", windowWidth / 2, windowHeight / 3);
 
   textSize(30);
@@ -325,7 +339,7 @@ function scene() {
   // console.log(guests);
 
   for (const guest of guests) {
-    push()
+    push();
     noStroke();
     translate(guest.x, guest.y - youSize / 2, guest.z);
     fill("orange");

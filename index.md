@@ -8,6 +8,7 @@
 - [Bouncing Circles](06-circle-bounce)
 - [Perlin Noise](07-noise)
 - [Terrain Generation](08-terrain)
+- [Library Demo (p5.Collide2D)](09-collision)
 
 ## Projects
 - [Interactive Scene: World](world)
