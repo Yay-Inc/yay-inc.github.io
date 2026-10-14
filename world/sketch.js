@@ -8,6 +8,29 @@
 
 // Where I got sky equirectangular photos: https://www.philohome.com/skycollec/skycollec.htm
 
+const COMMONWEBCOLORS = [
+  "black",
+  "white",
+  "red",
+  "blue",
+  "green",
+  "yellow",
+  "orange",
+  "purple",
+  "pink",
+  "gray",
+  "silver",
+  "cyan",
+  "magenta",
+  "brown",
+  "navy",
+  "teal",
+  "maroon",
+  "olive",
+  "coral",
+  "gold"
+];
+
 let canvas;
 let dirtImg;
 let skies = [];
@@ -16,8 +39,8 @@ let font;
 
 let paused = true;
 
-let my = { x: 0, y: 0, z: 0, fov: 75 };
-let youSize = 50;
+let my = { x: 0, y: 0, z: 0, fov: 75, pan: 90, tilt: 0, color: "black" };
+const YOUSIZE = 100;
 let speedX = 0;
 let speedY = 0;
 let speedZ = 0;
@@ -29,7 +52,6 @@ let guests;
 let shared;
 
 let world;
-const SEED = 2;
 const TERRAINHEIGHT = 2000;
 const TERRAINRES = 200;
 const MOD = 0.0002;
@@ -90,7 +112,7 @@ function preload() {
     "world"
   );
   
-  shared = partyLoadShared("shared", { seed: SEED, trees: [] });
+  shared = partyLoadShared("shared", { seed: 0, trees: [] });
   my = partyLoadMyShared(my);
   guests = partyLoadGuestShareds();
 
@@ -108,7 +130,10 @@ function setup() {
   canvas = createCanvas(windowWidth, windowHeight, WEBGL);
   angleMode(DEGREES);
 
-  noiseSeed(SEED);
+  if (shared.seed === 0) {
+    shared.seed = Math.floor(random(1, 100));
+  }
+  noiseSeed(shared.seed);
 
   // Generate world
   world = new World(RENDIS);
@@ -116,8 +141,10 @@ function setup() {
     shared.trees = world.trees;
   }
 
+  my.color = COMMONWEBCOLORS[Math.floor(Math.random() * COMMONWEBCOLORS.length)];
+
   cam = createCamera();
-  cam.setPosition(my.x, my.y - youSize, my.z);
+  cam.setPosition(my.x, my.y - YOUSIZE, my.z);
   cam.perspective(my.fov, width / height, 5, RENDIS * 2);
 }
 
@@ -136,7 +163,7 @@ function draw() {
 
 function keyPressed() {  
   // Switch sky
-  if (key === "b") {
+  if (key.toLowerCase() === "b") {
     if (skyNum < skies.length - 1) {
       skyNum++;
     }
@@ -146,18 +173,18 @@ function keyPressed() {
   }
 
   // Pause
-  else if (key === "e") {
+  else if (key.toLowerCase() === "e") {
     doubleClicked();
   }
 
   // Increase FOV
-  else if (key === "i" && my.fov < 120) {
+  else if (key.toLowerCase() === "i" && my.fov < 120) {
     my.fov += 5;
     console.log("FOV: " + my.fov);
   }
 
   // Decrease FOV
-  else if (key === "k" && my.fov > 25) {
+  else if (key.toLowerCase() === "k" && my.fov > 25) {
     my.fov -= 5;
     console.log("FOV: " + my.fov);
   }
@@ -166,25 +193,10 @@ function keyPressed() {
 function doubleClicked() {
   // Browsers require a mouse input to lock pointer
   if (paused) {
-    // canvas.remove();
-    // canvas = undefined;
-    // canvas = createCanvas(windowWidth, windowHeight, WEBGL);
-
-    // // Create camera only first time
-    // if (cam === undefined) {
-    //   cam = createCamera();
-    //   cam.setPosition(my.x, my.y - youSize, my.z);
-    //   cam.perspective(my.fov, width / height, 5, RENDIS * 2);
-    // }
-
     paused = false;
     requestPointerLock();
   }
   else {
-    // canvas.remove();
-    // canvas = undefined;
-    // canvas = createCanvas(windowWidth, windowHeight);
-    
     paused = true;
     exitPointerLock();
   }
@@ -237,12 +249,9 @@ function checkMoveInput() {
     speedY = -20;
   }
 
-  // Difference between cam and where it's pointing
-  let dif = createVector(cam.eyeX - cam.centerX, cam.eyeZ - cam.centerZ);
-  
   // Gets rotated movement vector
   let rotated = createVector(speedX, speedZ);
-  rotated.rotate(dif.heading() - 90);
+  rotated.rotate(my.pan - 90);
 
   my.x += rotated.x;
   my.y += speedY;
@@ -259,16 +268,20 @@ function checkMoveInput() {
 }
 
 function updateCam() {
-  cam.setPosition(my.x, my.y - youSize, my.z);
+  cam.setPosition(my.x, my.y - YOUSIZE, my.z);
   
   // Rotate camera based on mouse movements
   cam.pan(-movedX / 4 * sensitivity);
-  if (cam.centerY < 795 + my.y - youSize && movedY > 0 || cam.centerY > -795 + my.y - youSize && movedY < 0) {
+  if (cam.centerY < 795 + my.y - YOUSIZE && movedY > 0 || cam.centerY > -795 + my.y - YOUSIZE && movedY < 0) {
     cam.tilt(movedY / 4 * sensitivity);
   }
 
+  // found this math here: https://editor.p5js.org/rjgilmour/sketches/DKDWmmvrm
+  my.pan = atan2(cam.eyeZ - cam.centerZ, cam.eyeX - cam.centerX);
+  my.tilt = atan2(cam.eyeY - cam.centerY, dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ));
+
   // Update perspective
-  cam.perspective(my.fov, width / height, 30, RENDIS * 2);
+  cam.perspective(my.fov, width / height, YOUSIZE / 2, RENDIS * 2);
 
   setCamera(cam);
 }
@@ -279,25 +292,24 @@ function pauseScreen() {
   textSize(60);
   textFont(font);
   fill(255);
-  
-  let pan = atan2(cam.eyeZ - cam.centerZ, cam.eyeX - cam.centerX);
-  let tilt = atan2(cam.eyeY - cam.centerY, dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ));
-  
+
   translate(cam.eyeX, cam.eyeY, cam.eyeZ);
-  rotateY(-pan);
-  rotateZ(tilt + 180);
+  rotateY(-my.pan);
+  rotateZ(my.tilt + 180);
   translate(200, 0, 0);
   rotateY(-90);
   rotateZ(180);
   
-  text("PAUSED", windowWidth / 2, windowHeight / 3);
+  translate(0, -60, 0);
+  text("PAUSED", 0, 0);
 
+  translate(0, 50, 0);
   textSize(30);
-  text("Controls:", windowWidth / 2, windowHeight / 3 + 50);
+  text("Controls:", 0, 0);
 
-  textSize(20);
-  text("E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nX = Sprint\nB = Cycle sky\nI/K = Raise/Lower FOV", 
-    windowWidth / 2, windowHeight / 3 + 100);
+  translate(0, 20, 0);
+  textSize(10);
+  text("E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nX = Sprint\nB = Cycle sky\nI/K = Raise/Lower FOV", 0, 0);
 }
 
 function scene() {
@@ -341,9 +353,25 @@ function scene() {
   for (const guest of guests) {
     push();
     noStroke();
-    translate(guest.x, guest.y - youSize / 2, guest.z);
-    fill("orange");
-    cylinder(youSize / 4, youSize);
+    fill(guest.color);
+    
+    // Body
+    translate(guest.x, guest.y - YOUSIZE / 2, guest.z);
+    cylinder(YOUSIZE / 5, YOUSIZE);
+
+    // Head
+    translate(0, -YOUSIZE / 2, 0);
+    rotateY(guest.pan);
+    rotateZ(-guest.tilt);
+    box(YOUSIZE / 2);
+
+    // Eyes
+    fill(0);
+    translate(YOUSIZE / 4, 0, YOUSIZE / 8);
+    sphere(YOUSIZE / 16);
+    translate(0, 0, -YOUSIZE / 4);
+    sphere(YOUSIZE / 16);
+
     pop();
   }
 }
