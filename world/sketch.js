@@ -46,6 +46,7 @@ let speedY = 0;
 let speedZ = 0;
 
 let cam;
+let thirdPerson = false;
 let sensitivity = 1;
 const RENDIS = 20000;
 let guests;
@@ -177,6 +178,11 @@ function keyPressed() {
     doubleClicked();
   }
 
+  // Switch camera
+  else if (key.toLowerCase() === "r") {
+    thirdPerson = !thirdPerson;
+  }
+
   // Increase FOV
   else if (key.toLowerCase() === "i" && my.fov < 120) {
     my.fov += 5;
@@ -212,7 +218,7 @@ function checkMoveInput() {
   // Forward and Back
   if (keyIsDown(87) || keyIsDown(UP_ARROW)) {
     // Sprint
-    if (keyIsDown(88)) {
+    if (keyIsDown(16)) {
       speedZ = -20;
     }
     // Walk
@@ -283,6 +289,19 @@ function updateCam() {
   // Update perspective
   cam.perspective(my.fov, width / height, YOUSIZE / 2, RENDIS * 2);
 
+  if (thirdPerson) {
+    let rotatedPan = createVector(0, -YOUSIZE * 2);
+    rotatedPan.rotate(my.pan + 90);
+    
+    let rotatedTiltX = createVector(rotatedPan.x, -YOUSIZE);
+    rotatedTiltX.rotate(my.tilt);
+
+    let rotatedTiltZ = createVector(rotatedPan.z, rotatedTiltX.y);
+    rotatedTiltZ.rotate(my.tilt);
+
+    cam.setPosition(my.x + rotatedTiltX.x, my.y - YOUSIZE + rotatedTiltZ.y, my.z + rotatedTiltZ.x);
+  }
+
   setCamera(cam);
 }
 
@@ -309,7 +328,7 @@ function pauseScreen() {
 
   translate(0, 20, 0);
   textSize(10);
-  text("E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nX = Sprint\nB = Cycle sky\nI/K = Raise/Lower FOV", 0, 0);
+  text("E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nLeft Shift = Sprint\nB = Cycle sky\nI/K = Raise/Lower FOV", 0, 0);
 }
 
 function scene() {
@@ -357,11 +376,11 @@ function scene() {
     
     // Body
     translate(guest.x, guest.y - YOUSIZE / 2, guest.z);
+    rotateY(-guest.pan + 180);
     cylinder(YOUSIZE / 5, YOUSIZE);
 
     // Head
     translate(0, -YOUSIZE / 2, 0);
-    rotateY(guest.pan);
     rotateZ(-guest.tilt);
     box(YOUSIZE / 2);
 
