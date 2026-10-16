@@ -46,7 +46,7 @@ let speedY = 0;
 let speedZ = 0;
 
 let cam;
-let thirdPerson = false;
+let camMode = 0;
 let sensitivity = 1;
 const RENDIS = 20000;
 let guests;
@@ -143,10 +143,13 @@ function setup() {
   }
 
   my.color = COMMONWEBCOLORS[Math.floor(Math.random() * COMMONWEBCOLORS.length)];
-
+  
+  cam2 = createCamera();
   cam = createCamera();
   cam.setPosition(my.x, my.y - YOUSIZE, my.z);
   cam.perspective(my.fov, width / height, 5, RENDIS * 2);
+
+  
 }
 
 function draw() {
@@ -180,7 +183,12 @@ function keyPressed() {
 
   // Switch camera
   else if (key.toLowerCase() === "r") {
-    thirdPerson = !thirdPerson;
+    if (camMode !== 2) {
+      camMode++;
+    }
+    else {
+      camMode = 0;
+    }
   }
 
   // Increase FOV
@@ -215,39 +223,30 @@ function windowResized() {
 function checkMoveInput() {
   const ground = noise((my.x + RENDIS) * MOD, (my.z + RENDIS) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
   
+  let accelX = -2 * Math.abs(speedX) / speedX;
+  let accelZ = -2 * Math.abs(speedZ) / speedZ;
+
   // Forward and Back
   if (keyIsDown(87) || keyIsDown(UP_ARROW)) {
     // Sprint
     if (keyIsDown(16)) {
-      speedZ = -20;
+      accelZ = -20;
     }
     // Walk
     else {
-      speedZ = -10;
+      accelZ = -10;
     }
   }
   else if (keyIsDown(83) || keyIsDown(DOWN_ARROW)) {
-    speedZ = 10;
-  }
-  else {
-    // Deceleration
-    if (speedZ !== 0) {
-      speedZ -= speedZ / Math.abs(speedZ);
-    }
+    accelZ = 10;
   }
 
   // Strafe
   if (keyIsDown(65) || keyIsDown(LEFT_ARROW)) {
-    speedX = -8;
+    accelX = -8;
   }
   else if (keyIsDown(68) || keyIsDown(RIGHT_ARROW)) {
-    speedX = 8;
-  }
-  else {
-    // Deceleration
-    if (speedX !== 0) {
-      speedX -= speedX / Math.abs(speedX);
-    }
+    accelX = 8;
   }
   
   // Jump
@@ -256,12 +255,20 @@ function checkMoveInput() {
   }
 
   // Gets rotated movement vector
-  let rotated = createVector(speedX, speedZ);
+  let rotated = createVector(accelX, accelZ);
   rotated.rotate(my.pan - 90);
 
-  my.x += rotated.x;
+  if (Math.abs(speedX + rotated.x) <= 20) {
+    speedX += rotated.x;
+  }
+  
+  if (Math.abs(speedZ + rotated.y) <= 20) {
+    speedZ += rotated.y;
+  }
+
+  my.x += speedX;
   my.y += speedY;
-  my.z += rotated.y;
+  my.z += speedZ;
 
   // Essentially gravity
   if (my.y < ground) {
@@ -289,23 +296,27 @@ function updateCam() {
   // Update perspective
   cam.perspective(my.fov, width / height, YOUSIZE / 2, RENDIS * 2);
 
-  if (thirdPerson) {
-    let rotatedPan = createVector(0, -YOUSIZE * 2);
-    rotatedPan.rotate(my.pan + 90);
-    
-    let rotatedTiltX = createVector(rotatedPan.x, -YOUSIZE);
-    rotatedTiltX.rotate(my.tilt);
-
-    let rotatedTiltZ = createVector(rotatedPan.z, rotatedTiltX.y);
-    rotatedTiltZ.rotate(my.tilt);
-
-    cam.setPosition(my.x + rotatedTiltX.x, my.y - YOUSIZE + rotatedTiltZ.y, my.z + rotatedTiltZ.x);
+  if (camMode === 1) {
+    cam.move(0, 0, YOUSIZE * 2.5);
+    setCamera(cam);
   }
-
-  setCamera(cam);
+  else if (camMode === 2) {
+    let cam2 = createCamera();
+    cam2.set(cam);
+    cam2.pan(180);
+    cam2.move(0, 0, YOUSIZE * 2.5);
+    setCamera(cam2);
+  }
+  else {
+    setCamera(cam);
+  }
+  
 }
 
 function pauseScreen() {
+  cam.perspective(60, width / height, 1, 1000);
+  setCamera(cam);
+  
   background(150);
   textAlign(CENTER);
   textSize(60);
@@ -315,7 +326,7 @@ function pauseScreen() {
   translate(cam.eyeX, cam.eyeY, cam.eyeZ);
   rotateY(-my.pan);
   rotateZ(my.tilt + 180);
-  translate(200, 0, 0);
+  translate(400, 0, 0);
   rotateY(-90);
   rotateZ(180);
   
