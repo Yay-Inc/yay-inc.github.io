@@ -4,7 +4,8 @@
 //
 // Extra for Experts:
 // - Worked in 3D with WEBGL canvas
-// - Used classes, arrays, and vectors
+// - Used classes and vectors
+// - Used p5.party to host multiplayer world
 
 // Where I got sky equirectangular photos: https://www.philohome.com/skycollec/skycollec.htm
 
@@ -34,7 +35,7 @@ const COMMONWEBCOLORS = [
 let canvas;
 let dirtImg;
 let skies = [];
-let skyNum = 0;
+let skiesLightMaps = [];
 let font;
 
 let paused = true;
@@ -46,12 +47,13 @@ let speedY = 0;
 let speedZ = 0;
 
 let cam;
+let cam2;
 let camMode = 0;
 let sensitivity = 1;
 const RENDIS = 20000;
 let guests;
 let shared;
-
+let lastFov = -1000;
 let world;
 const TERRAINHEIGHT = 2000;
 const TERRAINRES = 200;
@@ -89,10 +91,10 @@ class World {
     
     // Setup trees
     this.trees = [];
-    let num = Math.floor(random(size / 200, size / 50));
+    let numTree = Math.floor(random(size / 200, size / 50));
     
     // Add trees with random dimensions
-    for (let i = 0; i < num; i++) {
+    for (let i = 0; i < numTree; i++) {
       let tree = {};
       tree.treeHeight = random(300, 1000);
       
@@ -102,6 +104,24 @@ class World {
       tree.y = noise((tree.x + size) * MOD, (tree.z + size) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
       
       this.trees.push(tree);
+    }
+
+    // Setup rocks
+    this.rocks = [];
+    let numRock = Math.floor(random(size / 100, size / 50));
+    
+    // Add rocks with random dimensions
+    for (let i = 0; i < numRock; i++) {
+      let rock = {};
+      rock.size = random(30, 150);
+      
+      rock.x = Math.floor(random(-size / TERRAINRES, size / TERRAINRES)) * TERRAINRES;
+      rock.z = Math.floor(random(-size / TERRAINRES, size / TERRAINRES)) * TERRAINRES;
+      rock.y = noise((rock.x + size) * MOD, (rock.z + size) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
+
+      rock.shade = random(70, 130);
+      
+      this.rocks.push(rock);
     }
   }
 }
@@ -113,16 +133,16 @@ function preload() {
     "world"
   );
   
-  shared = partyLoadShared("shared", { seed: 0, trees: [] });
+  shared = partyLoadShared("shared", { seed: 0, trees: [], rocks: [], sky: -1 });
   my = partyLoadMyShared(my);
   guests = partyLoadGuestShareds();
 
   // Load ground and sky images
   dirtImg = loadImage("assets/dirt-texture.jpg");
-  skies.push(loadImage("assets/sky2.jpg"));
-  skies.push(loadImage("assets/sky5.jpg"));
-  skies.push(loadImage("assets/sky9.jpg"));
-  skies.push(loadImage("assets/sky16.jpg"));
+  for (let i = 1; i < 16; i++) {
+    skies.push(loadImage(`assets/sky${i}.jpg`));
+    skiesLightMaps.push(loadImage(`assets/sky${i}.jpg`));
+  }
 
   font = loadFont("assets/Genjibold.otf");
 }
@@ -136,10 +156,18 @@ function setup() {
   }
   noiseSeed(shared.seed);
 
+  if (shared.sky === -1) {
+    shared.sky = Math.floor(random(0, skies.length));
+  }
+  for (let n of skiesLightMaps) {
+    n.filter(THRESHOLD, 0.9);
+  }
+
   // Generate world
   world = new World(RENDIS);
   if (partyIsHost()) {
     shared.trees = world.trees;
+    shared.rocks = world.rocks;
   }
 
   my.color = COMMONWEBCOLORS[Math.floor(Math.random() * COMMONWEBCOLORS.length)];
@@ -149,16 +177,18 @@ function setup() {
   cam.setPosition(my.x, my.y - YOUSIZE, my.z);
   cam.perspective(my.fov, width / height, 5, RENDIS * 2);
 
-  
+  background(120);
 }
 
 function draw() {
   // Check if paused
   if (!paused) {
     lights();
+    imageLight(skiesLightMaps[shared.sky]);
     checkMoveInput();
     updateCam();
     scene();
+    hud();
   }
   else {
     pauseScreen();
@@ -168,11 +198,11 @@ function draw() {
 function keyPressed() {  
   // Switch sky
   if (key.toLowerCase() === "b") {
-    if (skyNum < skies.length - 1) {
-      skyNum++;
+    if (shared.sky < skies.length - 1) {
+      shared.sky++;
     }
     else {
-      skyNum = 0;
+      shared.sky = 0;
     }
   }
 
@@ -194,13 +224,13 @@ function keyPressed() {
   // Increase FOV
   else if (key.toLowerCase() === "i" && my.fov < 120) {
     my.fov += 5;
-    console.log("FOV: " + my.fov);
+    lastFov = millis();
   }
 
   // Decrease FOV
   else if (key.toLowerCase() === "k" && my.fov > 25) {
     my.fov -= 5;
-    console.log("FOV: " + my.fov);
+    lastFov = millis();
   }
 }
 
@@ -223,8 +253,8 @@ function windowResized() {
 function checkMoveInput() {
   const ground = noise((my.x + RENDIS) * MOD, (my.z + RENDIS) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
   
-  let accelX = -2 * Math.abs(speedX) / speedX;
-  let accelZ = -2 * Math.abs(speedZ) / speedZ;
+  let accelX = 0;
+  let accelZ = 0;
 
   // Forward and Back
   if (keyIsDown(87) || keyIsDown(UP_ARROW)) {
@@ -258,13 +288,8 @@ function checkMoveInput() {
   let rotated = createVector(accelX, accelZ);
   rotated.rotate(my.pan - 90);
 
-  if (Math.abs(speedX + rotated.x) <= 20) {
-    speedX += rotated.x;
-  }
-  
-  if (Math.abs(speedZ + rotated.y) <= 20) {
-    speedZ += rotated.y;
-  }
+  speedX = lerp(speedX, rotated.x, 0.1);
+  speedZ = lerp(speedZ, rotated.y, 0.1);
 
   my.x += speedX;
   my.y += speedY;
@@ -277,6 +302,12 @@ function checkMoveInput() {
   else {
     speedY = 0;
     my.y = ground;
+  }
+
+  // Check for collisions
+  if (checkCollision(speedX, speedY, speedZ, my.x, my.y, my.z)) {
+    my.x -= speedX;
+    my.z -= speedZ;
   }
 }
 
@@ -317,7 +348,7 @@ function pauseScreen() {
   cam.perspective(60, width / height, 1, 1000);
   setCamera(cam);
   
-  background(150);
+  background(120);
   textAlign(CENTER);
   textSize(60);
   textFont(font);
@@ -348,7 +379,12 @@ function scene() {
   // Draw the sky
   push();
   noStroke();
-  texture(skies[skyNum]);
+  if (keyIsDown(76)) {
+    texture(skiesLightMaps[shared.sky]);
+  }
+  else {
+    texture(skies[shared.sky]);
+  }
   sphere(RENDIS);
   pop();
   
@@ -377,8 +413,22 @@ function scene() {
     pop();
   }
 
+  // Draw rocks
+  for (let i = 0; i < shared.rocks.length; i++) {
+    let rock = shared.rocks[i];
+    
+    push();
+    noStroke();
+    translate(rock.x, rock.y - rock.size / 1.5, rock.z);
+    fill(rock.shade);
+    sphere(rock.size);
+    pop();
+  }
+  
   // Draw people
-  // console.log(guests);
+  if (keyIsDown(76)) {
+    console.log(guests);
+  }
 
   for (const guest of guests) {
     push();
@@ -404,4 +454,43 @@ function scene() {
 
     pop();
   }
+}
+
+function hud() {
+  clearDepth();
+
+  push();
+  translate(cam.eyeX, cam.eyeY, cam.eyeZ);
+  rotateY(-my.pan);
+  rotateZ(my.tilt + 180);
+  translate(200 / tan(my.fov / 2), 0, 0);
+  rotateY(-90);
+  rotateZ(180);
+
+  noFill();
+  stroke(255);
+  if (camMode === 0) {
+    circle(0, 0, 10);
+  }
+
+  textAlign(CENTER);
+  textFont(font);
+  fill(255);
+
+  if (lastFov + 1000 > millis()) {
+    translate(-100, -60, 0);
+    textSize(30);
+    text(`FOV: ${my.fov}`, 0, 0);
+  }
+
+  pop();
+}
+
+function checkCollision(x, y, z, dx, dy, dz) {
+  // Check sky
+  if (dist(0, 0, 0, x, y, z) >= RENDIS - YOUSIZE / 5) {
+    return true;
+  }
+  
+  return false;
 }
