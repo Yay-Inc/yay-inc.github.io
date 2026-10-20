@@ -40,7 +40,7 @@ let font;
 
 let paused = true;
 
-let my = { x: 0, y: 0, z: 0, fov: 75, pan: 90, tilt: 0, color: "black" };
+let my = { x: 10000, y: 0, z: 10000, fov: 75, pan: 90, tilt: 0, color: "black" };
 const YOUSIZE = 100;
 let speedX = 0;
 let speedY = 0;
@@ -83,8 +83,7 @@ class World {
           i * side + j + side]);
       }
     }
-
-    //terrain.makeEdgesFromFaces();
+    
     terrain.computeNormals();
 
     this.terrain = terrain;
@@ -122,6 +121,27 @@ class World {
       rock.shade = random(70, 130);
       
       this.rocks.push(rock);
+    }
+
+    // Setup grass
+    this.grass = [];
+
+    for (let i = -size; i < size; i += TERRAINRES) {
+      for (let j = -size; j < size; j += TERRAINRES) {
+        let ground = noise((i + size) * MOD, (j + size) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
+        if (ground < -TERRAINHEIGHT / 4 && random() > 0.3) {
+          let blade = {};
+          blade.x = i;
+          blade.y = ground;
+          blade.z = j;
+
+          blade.height = random(60, 100);
+          blade.ax = random(160, 200);
+          blade.az = random(-20, 20);
+          
+          this.grass.push(blade);
+        }
+      }
     }
   }
 }
@@ -291,6 +311,13 @@ function checkMoveInput() {
   speedX = lerp(speedX, rotated.x, 0.1);
   speedZ = lerp(speedZ, rotated.y, 0.1);
 
+  // Check for collisions
+  let d = checkCollision(my.x, my.y, my.z, speedX, speedY, speedZ);
+
+  speedX = d.x;
+  speedY = d.y;
+  speedZ = d.z;
+
   my.x += speedX;
   my.y += speedY;
   my.z += speedZ;
@@ -302,12 +329,6 @@ function checkMoveInput() {
   else {
     speedY = 0;
     my.y = ground;
-  }
-
-  // Check for collisions
-  if (checkCollision(speedX, speedY, speedZ, my.x, my.y, my.z)) {
-    my.x -= speedX;
-    my.z -= speedZ;
   }
 }
 
@@ -385,7 +406,7 @@ function scene() {
   else {
     texture(skies[shared.sky]);
   }
-  sphere(RENDIS);
+  sphere(RENDIS - 500, 100);
   pop();
   
   // Draw the ground
@@ -422,6 +443,18 @@ function scene() {
     translate(rock.x, rock.y - rock.size / 1.5, rock.z);
     fill(rock.shade);
     sphere(rock.size);
+    pop();
+  }
+
+  // Draw grass
+  for (let i = 0; i < world.grass.length; i++) {
+    push();
+    noStroke();
+    translate(world.grass[i].x, world.grass[i].y, world.grass[i].z);
+    fill(50, 110, 30);
+    rotateX(world.grass[i].ax);
+    rotateZ(world.grass[i].az);
+    cone(10, world.grass[i].height);
     pop();
   }
   
@@ -487,10 +520,17 @@ function hud() {
 }
 
 function checkCollision(x, y, z, dx, dy, dz) {
+  let d = createVector(dx, dy, dz);
+  
   // Check sky
-  if (dist(0, 0, 0, x, y, z) >= RENDIS - YOUSIZE / 5) {
-    return true;
+  if (dist(0, 0, 0, x, y, z) > RENDIS - YOUSIZE - 500) {
+    
+    let v = createVector(dist(0, 0, 0, x, y, z) - (RENDIS - YOUSIZE - 500), 0);
+    v.setHeading(180 + createVector(x, z).heading());
+    d.add(createVector(v.x, 0, v.y));
+    
+    console.log("collide sky");
   }
   
-  return false;
+  return d;
 }
