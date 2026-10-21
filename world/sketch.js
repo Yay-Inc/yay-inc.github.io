@@ -36,6 +36,7 @@ let canvas;
 let dirtImg;
 let skies = [];
 let skiesLightMaps = [];
+let grassModel;
 let font;
 
 let paused = true;
@@ -126,8 +127,8 @@ class World {
     // Setup grass
     this.grass = [];
 
-    for (let i = -size; i < size; i += TERRAINRES) {
-      for (let j = -size; j < size; j += TERRAINRES) {
+    for (let i = -size; i < size; i += TERRAINRES / 3) {
+      for (let j = -size; j < size; j += TERRAINRES / 3) {
         let ground = noise((i + size) * MOD, (j + size) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
         if (ground < -TERRAINHEIGHT / 4 && random() > 0.3) {
           let blade = {};
@@ -146,28 +147,32 @@ class World {
   }
 }
 
-function preload() {
+
+async function setup() {
   // connect to a p5party server
-  partyConnect(
+  await partyConnect(
     "wss://demoserver.p5party.org",
     "world"
   );
   
-  shared = partyLoadShared("shared", { seed: 0, trees: [], rocks: [], sky: -1 });
-  my = partyLoadMyShared(my);
-  guests = partyLoadGuestShareds();
+  shared = await partyLoadShared("shared", { seed: 0, trees: [], rocks: [], sky: -1 });
+  my = await partyLoadMyShared(my);
+  guests = await partyLoadGuestShareds();
 
   // Load ground and sky images
-  dirtImg = loadImage("assets/dirt-texture.jpg");
+  dirtImg = await loadImage("assets/dirt-texture.jpg");
   for (let i = 1; i < 16; i++) {
-    skies.push(loadImage(`assets/sky${i}.jpg`));
-    skiesLightMaps.push(loadImage(`assets/sky${i}.jpg`));
+    skies.push(await loadImage(`assets/sky${i}.jpg`));
+    skiesLightMaps.push(await loadImage(`assets/sky${i}.jpg`));
   }
 
-  font = loadFont("assets/Genjibold.otf");
-}
+  // Load 3d models
+  grassModel = await loadModel("assets/ribbon_grass_tbdpec3r_ue_low.obj", true);
 
-function setup() {
+  font = await loadFont("assets/Genjibold.otf");
+
+
+
   canvas = createCanvas(windowWidth, windowHeight, WEBGL);
   angleMode(DEGREES);
 
@@ -277,31 +282,28 @@ function checkMoveInput() {
   let accelZ = 0;
 
   // Forward and Back
-  if (keyIsDown(87) || keyIsDown(UP_ARROW)) {
-    // Sprint
-    if (keyIsDown(16)) {
-      accelZ = -20;
-    }
-    // Walk
-    else {
-      accelZ = -10;
-    }
+  if (keyIsDown("w") || keyIsDown(UP_ARROW)) {
+    accelZ = -10;
+ 
   }
-  else if (keyIsDown(83) || keyIsDown(DOWN_ARROW)) {
+  else if (keyIsDown("s") || keyIsDown(DOWN_ARROW)) {
     accelZ = 10;
   }
 
   // Strafe
-  if (keyIsDown(65) || keyIsDown(LEFT_ARROW)) {
+  if (keyIsDown("a") || keyIsDown(LEFT_ARROW)) {
     accelX = -8;
   }
-  else if (keyIsDown(68) || keyIsDown(RIGHT_ARROW)) {
+  else if (keyIsDown("d") || keyIsDown(RIGHT_ARROW)) {
     accelX = 8;
   }
   
   // Jump
-  if (keyIsDown(32) && my.y >= ground - 20) {
+  if (keyIsDown("Space") && my.y >= ground - 20) {
     speedY = -20;
+  }
+  if (keyIsDown("Shift")) {
+    accelZ *= 2;
   }
 
   // Gets rotated movement vector
@@ -400,7 +402,7 @@ function scene() {
   // Draw the sky
   push();
   noStroke();
-  if (keyIsDown(76)) {
+  if (keyIsDown("l")) {
     texture(skiesLightMaps[shared.sky]);
   }
   else {
@@ -452,14 +454,15 @@ function scene() {
     noStroke();
     translate(world.grass[i].x, world.grass[i].y, world.grass[i].z);
     fill(50, 110, 30);
-    rotateX(world.grass[i].ax);
-    rotateZ(world.grass[i].az);
-    cone(10, world.grass[i].height);
+    // rotateX(world.grass[i].ax);
+    // rotateZ(world.grass[i].az);
+    // cone(10, world.grass[i].height);
+    model(grassModel);
     pop();
   }
   
   // Draw people
-  if (keyIsDown(76)) {
+  if (keyIsDown("l")) {
     console.log(guests);
   }
 

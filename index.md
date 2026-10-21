@@ -9,6 +9,7 @@
 - [Perlin Noise](07-noise)
 - [Terrain Generation](08-terrain)
 - [Library Demo (p5.Collide2D)](09-collision)
+- [Randomized Art](10-art)
 
 ## Projects
 - [Interactive Scene: World](world)
