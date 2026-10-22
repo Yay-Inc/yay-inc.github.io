@@ -127,18 +127,14 @@ class World {
     // Setup grass
     this.grass = [];
 
-    for (let i = -size; i < size; i += TERRAINRES / 3) {
-      for (let j = -size; j < size; j += TERRAINRES / 3) {
+    for (let i = -size; i < size; i += TERRAINRES / 1.5) {
+      for (let j = -size; j < size; j += TERRAINRES / 1.5) {
         let ground = noise((i + size) * MOD, (j + size) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
-        if (ground < -TERRAINHEIGHT / 4 && random() > 0.3) {
+        if (ground < -TERRAINHEIGHT / 4 && random() > 0.9) {
           let blade = {};
           blade.x = i;
           blade.y = ground;
           blade.z = j;
-
-          blade.height = random(60, 100);
-          blade.ax = random(160, 200);
-          blade.az = random(-20, 20);
           
           this.grass.push(blade);
         }
@@ -282,8 +278,8 @@ function checkMoveInput() {
   let accelZ = 0;
 
   // Forward and Back
-  if (keyIsDown("w") || keyIsDown(UP_ARROW)) {
-    accelZ = -10;
+  if (keyIsDown("w") || keyIsDown("W") || keyIsDown(UP_ARROW)) {
+    accelZ = -20;
  
   }
   else if (keyIsDown("s") || keyIsDown(DOWN_ARROW)) {
@@ -302,9 +298,9 @@ function checkMoveInput() {
   if (keyIsDown("Space") && my.y >= ground - 20) {
     speedY = -20;
   }
-  if (keyIsDown("Shift")) {
-    accelZ *= 2;
-  }
+  // if (keyIsDown("Shift")) {
+  //   accelZ *= 2;
+  // }
 
   // Gets rotated movement vector
   let rotated = createVector(accelX, accelZ);
@@ -418,6 +414,15 @@ function scene() {
   model(world.terrain);
   pop();
 
+  // Draw water
+  push();
+  noStroke();
+  fill("blue");
+  rotateX(-90);
+  translate(0, TERRAINHEIGHT / 2, 0);
+  plane(RENDIS * 2);
+  pop();
+
   // Draw trees
   for (let i = 0; i < shared.trees.length; i++) {
     let tree = shared.trees[i];
@@ -451,12 +456,9 @@ function scene() {
   // Draw grass
   for (let i = 0; i < world.grass.length; i++) {
     push();
-    noStroke();
+    normalMaterial();
     translate(world.grass[i].x, world.grass[i].y, world.grass[i].z);
     fill(50, 110, 30);
-    // rotateX(world.grass[i].ax);
-    // rotateZ(world.grass[i].az);
-    // cone(10, world.grass[i].height);
     model(grassModel);
     pop();
   }
