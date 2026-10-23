@@ -32,7 +32,6 @@ const COMMONWEBCOLORS = [
   "gold"
 ];
 
-let canvas;
 let dirtImg;
 let skies = [];
 let skiesLightMaps = [];
@@ -102,8 +101,9 @@ class World {
       tree.x = Math.floor(random(-size / TERRAINRES, size / TERRAINRES)) * TERRAINRES;
       tree.z = Math.floor(random(-size / TERRAINRES, size / TERRAINRES)) * TERRAINRES;
       tree.y = noise((tree.x + size) * MOD, (tree.z + size) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
-      
-      this.trees.push(tree);
+      if (tree.y <= 0) {
+        this.trees.push(tree);
+      }
     }
 
     // Setup rocks
@@ -168,8 +168,8 @@ async function setup() {
   font = await loadFont("assets/Genjibold.otf");
 
 
+  createCanvas(windowWidth, windowHeight, WEBGL);
 
-  canvas = createCanvas(windowWidth, windowHeight, WEBGL);
   angleMode(DEGREES);
 
   if (shared.seed === 0) {
@@ -389,7 +389,7 @@ function pauseScreen() {
 
   translate(0, 20, 0);
   textSize(10);
-  text("E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nLeft Shift = Sprint\nB = Cycle sky\nI/K = Raise/Lower FOV", 0, 0);
+  text("E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nB = Cycle sky\nI/K = Raise/Lower FOV", 0, 0);
 }
 
 function scene() {
@@ -419,7 +419,6 @@ function scene() {
   noStroke();
   fill("blue");
   rotateX(-90);
-  translate(0, TERRAINHEIGHT / 2, 0);
   plane(RENDIS * 2);
   pop();
 
@@ -490,6 +489,22 @@ function scene() {
     translate(0, 0, -YOUSIZE / 4);
     sphere(YOUSIZE / 16);
 
+    pop();
+  }
+
+  // Add filter if under water
+
+  if (my.y - YOUSIZE > 0) {
+    push();
+    noStroke();
+    fill(0, 0, 255, 50);
+    translate(cam.eyeX, cam.eyeY, cam.eyeZ);
+    rotateY(-my.pan);
+    rotateZ(my.tilt + 180);
+    translate(YOUSIZE / 2, 0, 0);
+    rotateY(-90);
+    rotateZ(180);
+    plane(10000);
     pop();
   }
 }
