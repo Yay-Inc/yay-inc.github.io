@@ -36,11 +36,12 @@ let dirtImg;
 let skies = [];
 let skiesLightMaps = [];
 let grassModel;
+let rockModels = [];
 let font;
 
 let paused = true;
 
-let my = { x: 10000, y: 0, z: 10000, fov: 75, pan: 90, tilt: 0, color: "black" };
+let my = { x: 0, y: 0, z: 0, fov: 75, pan: 90, tilt: 0, color: "black" };
 const YOUSIZE = 100;
 let speedX = 0;
 let speedY = 0;
@@ -113,7 +114,7 @@ class World {
     // Add rocks with random dimensions
     for (let i = 0; i < numRock; i++) {
       let rock = {};
-      rock.size = random(30, 150);
+      rock.model = Math.floor(random(0, 6));
       
       rock.x = Math.floor(random(-size / TERRAINRES, size / TERRAINRES)) * TERRAINRES;
       rock.z = Math.floor(random(-size / TERRAINRES, size / TERRAINRES)) * TERRAINRES;
@@ -164,6 +165,10 @@ async function setup() {
 
   // Load 3d models
   grassModel = await loadModel("assets/ribbon_grass_tbdpec3r_ue_low.obj", true);
+
+  for (let i = 1; i < 7; i++) {
+    rockModels.push(await loadModel(`assets/rock_d_0${i}.obj`, true));
+  }
 
   font = await loadFont("assets/Genjibold.otf");
 
@@ -298,6 +303,8 @@ function checkMoveInput() {
   if (keyIsDown("Space") && my.y >= ground - 20) {
     speedY = -20;
   }
+  
+  // This makes keys stick
   // if (keyIsDown("Shift")) {
   //   accelZ *= 2;
   // }
@@ -414,14 +421,6 @@ function scene() {
   model(world.terrain);
   pop();
 
-  // Draw water
-  push();
-  noStroke();
-  fill("blue");
-  rotateX(-90);
-  plane(RENDIS * 2);
-  pop();
-
   // Draw trees
   for (let i = 0; i < shared.trees.length; i++) {
     let tree = shared.trees[i];
@@ -446,9 +445,9 @@ function scene() {
     
     push();
     noStroke();
-    translate(rock.x, rock.y - rock.size / 1.5, rock.z);
+    translate(rock.x, rock.y, rock.z);
     fill(rock.shade);
-    sphere(rock.size);
+    model(rockModels[rock.model]);
     pop();
   }
 
@@ -492,19 +491,33 @@ function scene() {
     pop();
   }
 
-  // Add filter if under water
+  // Draw water
+  push();
+  noStroke();
+  fill(0, 0, 255, 180);
+  rotateX(-90);
+  plane(RENDIS * 2);
+  pop();
 
+  // Add filter if under water
   if (my.y - YOUSIZE > 0) {
     push();
     noStroke();
-    fill(0, 0, 255, 50);
+    fill(0, 0, 255, 80);
     translate(cam.eyeX, cam.eyeY, cam.eyeZ);
     rotateY(-my.pan);
     rotateZ(my.tilt + 180);
-    translate(YOUSIZE / 2, 0, 0);
+    translate(YOUSIZE / 1.5, 0, 0);
     rotateY(-90);
     rotateZ(180);
-    plane(10000);
+    if (camMode !== 2) {
+      plane(10000);
+    }
+    else {
+      rotateY(180);
+      translate(0, 0, YOUSIZE);
+      plane(10000);
+    }
     pop();
   }
 }
