@@ -36,6 +36,7 @@ let dirtImg;
 let skies = [];
 let skiesLightMaps = [];
 let grassModel;
+let treeModel;
 let rockModels = [];
 let font;
 
@@ -55,6 +56,7 @@ const RENDIS = 20000;
 let guests;
 let shared;
 let lastFov = -1000;
+let skyCollide = false;
 let world;
 const TERRAINHEIGHT = 2000;
 const TERRAINRES = 200;
@@ -91,14 +93,13 @@ class World {
     
     // Setup trees
     this.trees = [];
-    let numTree = Math.floor(random(size / 200, size / 50));
+    let numTree = Math.floor(random(size / 200, size / 100));
     
     // Add trees with random dimensions
     for (let i = 0; i < numTree; i++) {
       let tree = {};
-      tree.treeHeight = random(300, 1000);
+      tree.scale = random(800, 1500) / treeModel.trunk.calculateBoundingBox().size.y;
       
-      tree.treeWidth = random(tree.treeHeight / 5, tree.treeHeight / 1.5);
       tree.x = Math.floor(random(-size / TERRAINRES, size / TERRAINRES)) * TERRAINRES;
       tree.z = Math.floor(random(-size / TERRAINRES, size / TERRAINRES)) * TERRAINRES;
       tree.y = noise((tree.x + size) * MOD, (tree.z + size) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
@@ -167,8 +168,13 @@ async function setup() {
   grassModel = await loadModel("assets/ribbon_grass_tbdpec3r_ue_low.obj", true);
 
   for (let i = 1; i < 7; i++) {
-    rockModels.push(await loadModel(`assets/rock_d_0${i}.obj`, true));
+    rockModels.push(await loadModel(`assets/rock_d_0${i}.obj`));
   }
+
+  treeModel = {
+    trunk: await loadModel("assets/MapleTreeStem.obj"),
+    leaves: await loadModel("assets/MapleTreeLeaves.obj"),
+  };
 
   font = await loadFont("assets/Genjibold.otf");
 
@@ -248,13 +254,13 @@ function keyPressed() {
   }
 
   // Increase FOV
-  else if (key.toLowerCase() === "i" && my.fov < 120) {
+  else if (key.toLowerCase() === "z" && my.fov < 120) {
     my.fov += 5;
     lastFov = millis();
   }
 
   // Decrease FOV
-  else if (key.toLowerCase() === "k" && my.fov > 25) {
+  else if (key.toLowerCase() === "x" && my.fov > 25) {
     my.fov -= 5;
     lastFov = millis();
   }
@@ -319,13 +325,9 @@ function checkMoveInput() {
   // Check for collisions
   let d = checkCollision(my.x, my.y, my.z, speedX, speedY, speedZ);
 
-  speedX = d.x;
-  speedY = d.y;
-  speedZ = d.z;
-
-  my.x += speedX;
-  my.y += speedY;
-  my.z += speedZ;
+  my.x += d.x;
+  my.y += d.y;
+  my.z += d.z;
 
   // Essentially gravity
   if (my.y < ground) {
@@ -351,7 +353,12 @@ function updateCam() {
   my.tilt = atan2(cam.eyeY - cam.centerY, dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ));
 
   // Update perspective
-  cam.perspective(my.fov, width / height, YOUSIZE / 2, RENDIS * 2);
+  if (keyIsDown("c")) {
+    cam.perspective(15, width / height, 10, RENDIS * 2);
+  }
+  else {
+    cam.perspective(my.fov, width / height, 10, RENDIS * 2);
+  }
 
   if (camMode === 1) {
     cam.move(0, 0, YOUSIZE * 2.5);
@@ -396,7 +403,7 @@ function pauseScreen() {
 
   translate(0, 20, 0);
   textSize(10);
-  text("E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nB = Cycle sky\nI/K = Raise/Lower FOV", 0, 0);
+  text("E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nQ = Show who is online\nC = Camera Zoom\nZ/X = Raise/Lower FOV\nB = Cycle sky", 0, 0);
 }
 
 function scene() {
@@ -428,15 +435,17 @@ function scene() {
     // Trunk
     push();
     noStroke();
-    translate(tree.x, tree.y - tree.treeHeight / 2 + 20, tree.z);
+    translate(tree.x, tree.y, tree.z);
+    rotateX(180);
+    scale(tree.scale);
     fill(80, 50, 10);
-    cylinder(tree.treeHeight / 10, tree.treeHeight);
+    model(treeModel.trunk);
 
     // Leaves
-    translate(0, -tree.treeHeight / 2 - 5, 0);
     fill(40, 100, 40);
-    cone(tree.treeWidth, -tree.treeHeight);
+    model(treeModel.leaves);
     pop();
+    
   }
 
   // Draw rocks
@@ -447,6 +456,7 @@ function scene() {
     noStroke();
     translate(rock.x, rock.y, rock.z);
     fill(rock.shade);
+    scale(100);
     model(rockModels[rock.model]);
     pop();
   }
@@ -467,28 +477,30 @@ function scene() {
   }
 
   for (const guest of guests) {
-    push();
-    noStroke();
-    fill(guest.color);
-    
-    // Body
-    translate(guest.x, guest.y - YOUSIZE / 2, guest.z);
-    rotateY(-guest.pan + 180);
-    cylinder(YOUSIZE / 5, YOUSIZE);
+    if (guest !== my || camMode !== 0) { 
+      push();
+      noStroke();
+      fill(guest.color);
+      
+      // Body
+      translate(guest.x, guest.y - YOUSIZE / 2, guest.z);
+      rotateY(-guest.pan + 180);
+      cylinder(YOUSIZE / 5, YOUSIZE);
 
-    // Head
-    translate(0, -YOUSIZE / 2, 0);
-    rotateZ(-guest.tilt);
-    box(YOUSIZE / 2);
+      // Head
+      translate(0, -YOUSIZE / 2, 0);
+      rotateZ(-guest.tilt);
+      box(YOUSIZE / 2);
 
-    // Eyes
-    fill(0);
-    translate(YOUSIZE / 4, 0, YOUSIZE / 8);
-    sphere(YOUSIZE / 16);
-    translate(0, 0, -YOUSIZE / 4);
-    sphere(YOUSIZE / 16);
+      // Eyes
+      fill(0);
+      translate(YOUSIZE / 4, 0, YOUSIZE / 8);
+      sphere(YOUSIZE / 16);
+      translate(0, 0, -YOUSIZE / 4);
+      sphere(YOUSIZE / 16);
 
-    pop();
+      pop();
+    }
   }
 
   // Draw water
@@ -507,7 +519,7 @@ function scene() {
     translate(cam.eyeX, cam.eyeY, cam.eyeZ);
     rotateY(-my.pan);
     rotateZ(my.tilt + 180);
-    translate(YOUSIZE / 1.5, 0, 0);
+    translate(15, 0, 0);
     rotateY(-90);
     rotateZ(180);
     if (camMode !== 2) {
@@ -515,7 +527,7 @@ function scene() {
     }
     else {
       rotateY(180);
-      translate(0, 0, YOUSIZE);
+      translate(0, 0, YOUSIZE * 2.5 - 30);
       plane(10000);
     }
     pop();
@@ -529,7 +541,12 @@ function hud() {
   translate(cam.eyeX, cam.eyeY, cam.eyeZ);
   rotateY(-my.pan);
   rotateZ(my.tilt + 180);
-  translate(200 / tan(my.fov / 2), 0, 0);
+  if (keyIsDown("c")) {
+    translate(200 / tan(15 / 2), 0, 0);
+  }
+  else {
+    translate(200 / tan(my.fov / 2), 0, 0);
+  }
   rotateY(-90);
   rotateZ(180);
 
@@ -543,10 +560,41 @@ function hud() {
   textFont(font);
   fill(255);
 
+  if (keyIsDown("c")) {
+    noFill();
+    circle(0, 0, 40);
+    fill(255);
+  }
+
+  if (skyCollide) {
+    translate(0, 60, 0);
+    textSize(20);
+    text("Out of Bounds", 0, 0);
+    translate(0, -60, 0);
+  }
+
   if (lastFov + 1000 > millis()) {
-    translate(-100, -60, 0);
+    translate(100, -60, 0);
     textSize(30);
     text(`FOV: ${my.fov}`, 0, 0);
+    translate(-100, 60, 0);
+  }
+
+  if (keyIsDown("q")) {
+    translate(-140, -100, 0);
+    textSize(30);
+    text("Online:", 0, 0);
+    textSize(20);
+    translate(0, 30, 0);
+    fill(my.color);
+    text(`${my.color.charAt(0).toUpperCase() + my.color.slice(1)} (You)`, 0, 0);
+    for (const guest of guests) {
+      if (guest !== my) {
+        translate(0, 30, 0);
+        fill(guest.color);
+        text(guest.color.charAt(0).toUpperCase() + guest.color.slice(1), 0, 0);
+      }
+    }
   }
 
   pop();
@@ -562,7 +610,10 @@ function checkCollision(x, y, z, dx, dy, dz) {
     v.setHeading(180 + createVector(x, z).heading());
     d.add(createVector(v.x, 0, v.y));
     
-    console.log("collide sky");
+    skyCollide = true;
+  }
+  else {
+    skyCollide = false;
   }
   
   return d;
