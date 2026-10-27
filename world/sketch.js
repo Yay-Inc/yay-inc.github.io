@@ -8,6 +8,7 @@
 // - Used p5.party to host multiplayer world
 
 // Where I got sky equirectangular photos: https://www.philohome.com/skycollec/skycollec.htm
+// 3d Models are from OpenGameArt.org and Free3D.com, but I edited them in blender
 
 const COMMONWEBCOLORS = [
   "black",
