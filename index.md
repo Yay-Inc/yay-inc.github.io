@@ -11,8 +11,10 @@
 - [Library Demo (p5.Collide2D)](09-collision)
 - [Randomized Art](10-art)
 
+- [Grid Demo](12-grid)
+
 ## Projects
-- [Interactive Scene: World](world)
+- [World](world)
 
 ## Fun
 - [Bouncy Balls](bouncy-balls)

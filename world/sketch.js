@@ -42,8 +42,19 @@ let rockModels = [];
 let font;
 
 let paused = true;
+let chatting = false;
+let message = "";
 
-let my = { x: 0, y: 0, z: 0, fov: 75, pan: 90, tilt: 0, color: "black" };
+let my = { 
+  x: 0, 
+  y: 0, 
+  z: 0, 
+  fov: 75, 
+  pan: 90, 
+  tilt: 0, 
+  color: "black",
+};
+
 const YOUSIZE = 100;
 let speedX = 0;
 let speedY = 0;
@@ -154,7 +165,7 @@ async function setup() {
     "world"
   );
   
-  shared = await partyLoadShared("shared", { seed: 0, trees: [], rocks: [], sky: -1 });
+  shared = await partyLoadShared("shared", { seed: 0, trees: [], rocks: [], sky: -1, chat: [] });
   my = await partyLoadMyShared(my);
   guests = await partyLoadGuestShareds();
 
@@ -229,41 +240,63 @@ function draw() {
 }
 
 function keyPressed() {  
-  // Switch sky
-  if (key.toLowerCase() === "b") {
-    if (shared.sky < skies.length - 1) {
-      shared.sky++;
+  if (chatting) {
+    // Send chat message
+    if (key === "Enter") {
+      // send message here
     }
-    else {
-      shared.sky = 0;
-    }
-  }
-
-  // Pause
-  else if (key.toLowerCase() === "e") {
-    doubleClicked();
-  }
-
-  // Switch camera
-  else if (key.toLowerCase() === "r") {
-    if (camMode !== 2) {
-      camMode++;
-    }
-    else {
-      camMode = 0;
+    else if (key === "Backspace") {
+      message = message.slice(0, -1);
     }
   }
+  else {
+    // Switch sky
+    if (key.toLowerCase() === "b") {
+      if (shared.sky < skies.length - 1) {
+        shared.sky++;
+      }
+      else {
+        shared.sky = 0;
+      }
+    }
 
-  // Increase FOV
-  else if (key.toLowerCase() === "z" && my.fov < 120) {
-    my.fov += 5;
-    lastFov = millis();
+    // Pause
+    else if (key.toLowerCase() === "e") {
+      doubleClicked();
+    }
+
+    // Chat
+    else if (key.toLowerCase() === "t") {
+      chatting = true;
+    }
+
+    // Switch camera
+    else if (key.toLowerCase() === "r") {
+      if (camMode !== 2) {
+        camMode++;
+      }
+      else {
+        camMode = 0;
+      }
+    }
+
+    // Increase FOV
+    else if (key.toLowerCase() === "z" && my.fov < 120) {
+      my.fov += 5;
+      lastFov = millis();
+    }
+
+    // Decrease FOV
+    else if (key.toLowerCase() === "x" && my.fov > 25) {
+      my.fov -= 5;
+      lastFov = millis();
+    }
   }
+}
 
-  // Decrease FOV
-  else if (key.toLowerCase() === "x" && my.fov > 25) {
-    my.fov -= 5;
-    lastFov = millis();
+function keyTyped() {
+  if (chatting) {
+    message += key;
   }
 }
 
@@ -579,6 +612,10 @@ function hud() {
     textSize(30);
     text(`FOV: ${my.fov}`, 0, 0);
     translate(-100, 60, 0);
+  }
+
+  if (chatting) {
+
   }
 
   if (keyIsDown("q")) {
