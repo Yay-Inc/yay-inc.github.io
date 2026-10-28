@@ -243,7 +243,12 @@ function keyPressed() {
   if (chatting) {
     // Send chat message
     if (key === "Enter") {
-      // send message here
+      if (shared.chat.length > 4) {
+        shared.chat.pop();
+      }
+      shared.chat.push(message);
+      chatting = false;
+      message = "";
     }
     else if (key === "Backspace") {
       message = message.slice(0, -1);
@@ -295,7 +300,7 @@ function keyPressed() {
 }
 
 function keyTyped() {
-  if (chatting) {
+  if (chatting && key.length === 1) {
     message += key;
   }
 }
@@ -322,33 +327,30 @@ function checkMoveInput() {
   let accelX = 0;
   let accelZ = 0;
 
-  // Forward and Back
-  if (keyIsDown("w") || keyIsDown("W") || keyIsDown(UP_ARROW)) {
-    accelZ = -20;
- 
-  }
-  else if (keyIsDown("s") || keyIsDown(DOWN_ARROW)) {
-    accelZ = 10;
-  }
+  if (!chatting) {
+    // Forward and Back
+    if (keyIsDown("w") || keyIsDown("W") || keyIsDown(UP_ARROW)) {
+      accelZ = -20;
+  
+    }
+    else if (keyIsDown("s") || keyIsDown(DOWN_ARROW)) {
+      accelZ = 10;
+    }
 
-  // Strafe
-  if (keyIsDown("a") || keyIsDown(LEFT_ARROW)) {
-    accelX = -8;
-  }
-  else if (keyIsDown("d") || keyIsDown(RIGHT_ARROW)) {
-    accelX = 8;
+    // Strafe
+    if (keyIsDown("a") || keyIsDown(LEFT_ARROW)) {
+      accelX = -8;
+    }
+    else if (keyIsDown("d") || keyIsDown(RIGHT_ARROW)) {
+      accelX = 8;
+    }
+    
+    // Jump
+    if (keyIsDown("Space") && my.y >= ground - 20) {
+      speedY = -20;
+    }
   }
   
-  // Jump
-  if (keyIsDown("Space") && my.y >= ground - 20) {
-    speedY = -20;
-  }
-  
-  // This makes keys stick
-  // if (keyIsDown("Shift")) {
-  //   accelZ *= 2;
-  // }
-
   // Gets rotated movement vector
   let rotated = createVector(accelX, accelZ);
   rotated.rotate(my.pan - 90);
@@ -615,7 +617,12 @@ function hud() {
   }
 
   if (chatting) {
-
+    translate(-140, 100, 0);
+    textSize(20);
+    fill(200);
+    text(message, 0, 0);
+    fill(255);
+    translate(140, -100, 0);
   }
 
   if (keyIsDown("q")) {
