@@ -1,7 +1,8 @@
 // Grid Demo
 // 2D arrays
 
-let grid = [];
+let CELL = 80;
+let grid;
 
 async function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -18,9 +19,9 @@ function draw() {
 function genGrid() {
   grid = [];
   
-  for (let y = 0; y < random(8, 100); y++) {
+  for (let y = 0; y < Math.floor(height / CELL); y++) {
     let row = [];
-    for (let x = 0; x < random(8, 100); x++) {
+    for (let x = 0; x < Math.floor(width / CELL); x++) {
       row.push(Math.floor(random(0, 2)));
     }
     grid.push(row);
@@ -28,17 +29,25 @@ function genGrid() {
 }
 
 function drawGrid() {
-  let sizeY = height / grid.length;
-
   for (let y = 0; y < grid.length; y++) {
-    let sizeX = width / grid[y].length;
     for (let x = 0; x < grid[y].length; x++) {
       fill(grid[y][x] * 255);
-      rect(x * sizeX, y * sizeY, sizeX, sizeY);
+      square(x * CELL, y * CELL, CELL);
     }
   }
 }
 
+function keyPressed() {
+  if (key === "r") {
+    genGrid();
+  }
+}
+
 function mousePressed() {
-  genGrid();
+  if (grid[Math.floor(mouseY / CELL)][Math.floor(mouseX / CELL)] === 1) {
+    grid[Math.floor(mouseY / CELL)][Math.floor(mouseX / CELL)] = 0;
+  }
+  else {
+    grid[Math.floor(mouseY / CELL)][Math.floor(mouseX / CELL)] = 1;
+  }
 }

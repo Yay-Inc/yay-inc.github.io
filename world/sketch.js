@@ -11,7 +11,6 @@
 // 3d Models are from OpenGameArt.org and Free3D.com, but I edited them in blender
 
 const COMMONWEBCOLORS = [
-  "black",
   "white",
   "red",
   "blue",
@@ -246,7 +245,7 @@ function keyPressed() {
       if (shared.chat.length > 4) {
         shared.chat.pop();
       }
-      shared.chat.push(message);
+      shared.chat.splice(0, 0, { text: message, color: my.color });
       chatting = false;
       message = "";
     }
@@ -448,12 +447,7 @@ function scene() {
   // Draw the sky
   push();
   noStroke();
-  if (keyIsDown("l")) {
-    texture(skiesLightMaps[shared.sky]);
-  }
-  else {
-    texture(skies[shared.sky]);
-  }
+  texture(skies[shared.sky]);
   sphere(RENDIS - 500, 100);
   pop();
   
@@ -583,6 +577,7 @@ function hud() {
   else {
     translate(200 / tan(my.fov / 2), 0, 0);
   }
+  
   rotateY(-90);
   rotateZ(180);
 
@@ -590,17 +585,14 @@ function hud() {
   stroke(255);
   if (camMode === 0) {
     circle(0, 0, 10);
+    if (keyIsDown("c")) {
+      circle(0, 0, 40);
+    }
   }
 
   textAlign(CENTER);
   textFont(font);
   fill(255);
-
-  if (keyIsDown("c")) {
-    noFill();
-    circle(0, 0, 40);
-    fill(255);
-  }
 
   if (skyCollide) {
     translate(0, 60, 0);
@@ -616,17 +608,28 @@ function hud() {
     translate(-100, 60, 0);
   }
 
+  textAlign(LEFT);
+  textSize(10);
+
   if (chatting) {
-    translate(-140, 100, 0);
-    textSize(20);
-    fill(200);
+    translate(-width / 6, height / 7.3, 0);
+    fill(my.color);
     text(message, 0, 0);
-    fill(255);
-    translate(140, -100, 0);
+    translate(width / 6, -height / 7.3, 0);
   }
 
+  translate(-width / 6, height / 7.3, 0);
+  for (let i = 0; i < shared.chat.length; i++) {
+    translate(0, -15 * (i + 1), 0);
+    fill(shared.chat[i].color);
+    text(shared.chat[i].color.charAt(0).toUpperCase() + shared.chat[i].color.slice(1) + ": " + shared.chat[i].text, 0, 0);
+    translate(0, 15 * (i + 1), 0);
+  }
+  translate(width / 6, -height / 7.3, 0);
+  fill(255);
+
   if (keyIsDown("q")) {
-    translate(-140, -100, 0);
+    translate(-width / 9, -height / 9, 0);
     textSize(30);
     text("Online:", 0, 0);
     textSize(20);
