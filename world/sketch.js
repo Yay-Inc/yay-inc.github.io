@@ -38,6 +38,7 @@ let skiesLightMaps = [];
 let grassModel;
 let treeModel;
 let rockModels = [];
+let jolModel;
 let titleModel;
 let font;
 
@@ -187,6 +188,8 @@ async function setup() {
     trunk: await loadModel("assets/MapleTreeStem.obj"),
     leaves: await loadModel("assets/MapleTreeLeaves.obj"),
   };
+
+  jolModel = await loadModel("assets/jack-o-lantern.obj", true);
 
   font = await loadFont("assets/Genjibold.otf");
 
@@ -527,7 +530,16 @@ function scene() {
       // Head
       translate(0, -YOUSIZE / 2, 0);
       rotateZ(-guest.tilt);
-      box(YOUSIZE / 2);
+      // box(YOUSIZE / 2);
+
+      // Jack-o-lantern head for halloween
+      push();
+      fill(248, 114, 23);
+      rotateX(180);
+      rotateY(90);
+      scale(0.5);
+      model(jolModel);
+      pop();
 
       // Eyes
       fill(0);
