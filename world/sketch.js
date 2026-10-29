@@ -38,6 +38,7 @@ let skiesLightMaps = [];
 let grassModel;
 let treeModel;
 let rockModels = [];
+let titleModel;
 let font;
 
 let paused = true;
@@ -189,10 +190,12 @@ async function setup() {
 
   font = await loadFont("assets/Genjibold.otf");
 
-
   createCanvas(windowWidth, windowHeight, WEBGL);
 
   angleMode(DEGREES);
+
+  titleModel = font.textToModel("W o r l d", 0, 0, { extrude: 2, sampleFactor: 3 });
+  titleModel.normalize();
 
   if (shared.seed === 0) {
     shared.seed = Math.floor(random(1, 100));
@@ -242,15 +245,20 @@ function keyPressed() {
   if (chatting) {
     // Send chat message
     if (key === "Enter") {
-      if (shared.chat.length > 4) {
+      if (shared.chat.length > 10) {
         shared.chat.pop();
       }
-      shared.chat.splice(0, 0, { text: message, color: my.color });
+      if (message.length > 0) {
+        shared.chat.splice(0, 0, { text: message, color: my.color });
+      }
       chatting = false;
       message = "";
     }
     else if (key === "Backspace") {
       message = message.slice(0, -1);
+    }
+    else if (key.length === 1) {
+      message += key;
     }
   }
   else {
@@ -295,12 +303,6 @@ function keyPressed() {
       my.fov -= 5;
       lastFov = millis();
     }
-  }
-}
-
-function keyTyped() {
-  if (chatting && key.length === 1) {
-    message += key;
   }
 }
 
@@ -388,7 +390,7 @@ function updateCam() {
   my.tilt = atan2(cam.eyeY - cam.centerY, dist(cam.centerX, cam.centerZ, cam.eyeX, cam.eyeZ));
 
   // Update perspective
-  if (keyIsDown("c")) {
+  if (keyIsDown("c") && !chatting) {
     cam.perspective(15, width / height, 10, RENDIS * 2);
   }
   else {
@@ -438,24 +440,33 @@ function pauseScreen() {
 
   translate(0, 20, 0);
   textSize(10);
-  text("E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nQ = Show who is online\nC = Camera Zoom\nZ/X = Raise/Lower FOV\nB = Cycle sky", 0, 0);
+  text("E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nQ = Show who is online\nT = Chat (press Enter to send message)\nC = Camera Zoom\nZ/X = Raise/Lower FOV\nB = Cycle sky", 0, 0);
 }
 
 function scene() {
   background(220);
-  
+  noStroke();
+
   // Draw the sky
   push();
-  noStroke();
   texture(skies[shared.sky]);
   sphere(RENDIS - 500, 100);
   pop();
   
   // Draw the ground
   push();
-  noStroke();
   texture(dirtImg);
   model(world.terrain);
+  pop();
+
+  // Draw title
+  push();
+  fill(my.color);
+  rotateX(60);
+  translate(0, -RENDIS / 1.1, 0);
+  rotateX(-90);
+  scale(60);
+  model(titleModel);
   pop();
 
   // Draw trees
@@ -464,7 +475,6 @@ function scene() {
     
     // Trunk
     push();
-    noStroke();
     translate(tree.x, tree.y, tree.z);
     rotateX(180);
     scale(tree.scale);
@@ -483,7 +493,6 @@ function scene() {
     let rock = shared.rocks[i];
     
     push();
-    noStroke();
     translate(rock.x, rock.y, rock.z);
     fill(rock.shade);
     scale(100);
@@ -494,7 +503,6 @@ function scene() {
   // Draw grass
   for (let i = 0; i < world.grass.length; i++) {
     push();
-    normalMaterial();
     translate(world.grass[i].x, world.grass[i].y, world.grass[i].z);
     fill(50, 110, 30);
     model(grassModel);
@@ -502,14 +510,13 @@ function scene() {
   }
   
   // Draw people
-  if (keyIsDown("l")) {
+  if (keyIsDown("l") && !chatting) {
     console.log(guests);
   }
 
   for (const guest of guests) {
     if (guest !== my || camMode !== 0) { 
       push();
-      noStroke();
       fill(guest.color);
       
       // Body
@@ -535,7 +542,6 @@ function scene() {
 
   // Draw water
   push();
-  noStroke();
   fill(0, 0, 255, 180);
   rotateX(-90);
   plane(RENDIS * 2);
@@ -544,7 +550,6 @@ function scene() {
   // Add filter if under water
   if (my.y - YOUSIZE > 0) {
     push();
-    noStroke();
     fill(0, 0, 255, 80);
     translate(cam.eyeX, cam.eyeY, cam.eyeZ);
     rotateY(-my.pan);
@@ -571,7 +576,7 @@ function hud() {
   translate(cam.eyeX, cam.eyeY, cam.eyeZ);
   rotateY(-my.pan);
   rotateZ(my.tilt + 180);
-  if (keyIsDown("c")) {
+  if (keyIsDown("c") && !chatting) {
     translate(200 / tan(15 / 2), 0, 0);
   }
   else {
@@ -585,7 +590,7 @@ function hud() {
   stroke(255);
   if (camMode === 0) {
     circle(0, 0, 10);
-    if (keyIsDown("c")) {
+    if (keyIsDown("c") && !chatting) {
       circle(0, 0, 40);
     }
   }
@@ -609,21 +614,32 @@ function hud() {
   }
 
   textAlign(LEFT);
-  textSize(10);
+  fill(my.color);
+  textSize(15);
 
   if (chatting) {
+    textAlign(CENTER);
+    translate(0, 60, 0);
+    textSize(20);
+    text("Chatting...", 0, 0);
+    translate(0, -60, 0);
+    textAlign(LEFT);
     translate(-width / 6, height / 7.3, 0);
-    fill(my.color);
+    textSize(15);
     text(message, 0, 0);
+    translate(-20, -7, 0);
+    noStroke();
+    rect(0, 0, 16, 5);
+    translate(20, 7, 0);
     translate(width / 6, -height / 7.3, 0);
   }
 
   translate(-width / 6, height / 7.3, 0);
   for (let i = 0; i < shared.chat.length; i++) {
-    translate(0, -15 * (i + 1), 0);
+    translate(0, -18 * (i + 1), 0);
     fill(shared.chat[i].color);
     text(shared.chat[i].color.charAt(0).toUpperCase() + shared.chat[i].color.slice(1) + ": " + shared.chat[i].text, 0, 0);
-    translate(0, 15 * (i + 1), 0);
+    translate(0, 18 * (i + 1), 0);
   }
   translate(width / 6, -height / 7.3, 0);
   fill(255);
