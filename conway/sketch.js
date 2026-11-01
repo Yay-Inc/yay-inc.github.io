@@ -1,31 +1,82 @@
 // Conway's Game of Life
 
-let CELL = 20;
+const GOSPER_GUN = [
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], 
+  [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1], 
+  [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]
+];
+
+const DRAGON = [
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1], 
+  [0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1], 
+  [1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1], 
+  [1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1], 
+  [1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1], 
+  [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1], 
+  [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1], 
+  [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1], 
+  [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1], 
+  [1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1], 
+  [1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1], 
+  [1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1], 
+  [0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+];
+
+const PATTERNS = [{ code: GOSPER_GUN, x: 10, y: 10}, { code: DRAGON, x: -35, y: -25}];
+
+let CELL = 10;
 let grid;
 let paused = true;
+let erase = false;
+let fps = 60;
 
 async function setup() {
   createCanvas(windowWidth, windowHeight);
-
+  frameRate(fps);
   clearGrid();
 }
 
 function draw() {
   background(220);
-  stroke(200);
+  strokeWeight(1);
+  stroke(150);
 
   if (!paused) {
     updateGrid();
+    if (fps > 60) {
+      for (let i = 0; i < Math.floor(fps / 60) - 1; i++) {
+        updateGrid();
+      }
+      if (random(0, 60) > fps % 60) {
+        updateGrid();
+      }
+    }
   }
   
   drawGrid();
   
   if (paused) {
     fill(200, 20, 0, 100);
-    triangle(width / 3, height / 4, width * 2 / 3, height / 2, width / 3, height * 3 / 4);
+    triangle(height / 5, height / 5, height / 5, height * 2 / 5, height * 2 / 5, height * 3 / 10);
   }
-  
-  
+
+  if (keyIsDown("f")) {
+    updateGrid();
+    if (keyIsDown("v")) {
+      updateGrid();
+    }
+  }
 }
 
 function genGrid() {
@@ -55,7 +106,12 @@ function clearGrid() {
 function drawGrid() {
   for (let y = 0; y < grid.length; y++) {
     for (let x = 0; x < grid[y].length; x++) {
-      fill(grid[y][x] * 255);
+      if (grid[y][x] === 0) {
+        fill(255);
+      }
+      else {
+        fill(0);
+      }
       square(x * CELL, y * CELL, CELL);
     }
   }
@@ -84,6 +140,21 @@ function updateGrid() {
   grid = nextGrid;
 }
 
+function applyPattern(pattern) {
+  if (pattern.x < 0) {
+    pattern.x = grid[0].length + pattern.x;
+  }
+  if (pattern.y < 0) {
+    pattern.y = grid.length + pattern.y;
+  }
+
+  for (let y = 0; y < pattern.code.length; y++) {
+    for (let x = 0; x < pattern.code[y].length; x++) {
+      grid[y + pattern.y][x + pattern.x] = pattern.code[y][x];
+    }
+  }
+}
+
 function keyPressed() {
   if (key === "p") {
     paused = !paused;
@@ -94,13 +165,48 @@ function keyPressed() {
   else if (key === "c") {
     clearGrid();
   }
+  else if (key === "n" && paused) {
+    updateGrid();
+  }
+  else if (key === ".") {
+    fps *= 1.5;
+    frameRate(Math.round(fps));
+  }
+  else if (key === ",") {
+    fps *= 1 / 1.5;
+    frameRate(Math.round(fps));
+  }
+  else if (int(key) >= 0 && int(key) <= 9) {
+    applyPattern(PATTERNS[int(key)]);
+  }
 }
 
 function mousePressed() {
-  if (grid[Math.floor(mouseY / CELL)][Math.floor(mouseX / CELL)] === 1) {
-    grid[Math.floor(mouseY / CELL)][Math.floor(mouseX / CELL)] = 0;
+  let y = Math.floor(mouseY / CELL);
+  let x = Math.floor(mouseX / CELL);
+  
+  if (grid[y][x] === 1) {
+    grid[y][x] = 0;
+    erase = true;
   }
   else {
-    grid[Math.floor(mouseY / CELL)][Math.floor(mouseX / CELL)] = 1;
+    grid[y][x] = 1;
+    erase = false;
+  }
+}
+
+function mouseDragged() {
+  let y = Math.floor(mouseY / CELL);
+  let x = Math.floor(mouseX / CELL);
+  let py = Math.floor(pmouseY / CELL);
+  let px = Math.floor(pmouseX / CELL);
+  
+  if (y !== py || x !== px) {
+    if (erase) {
+      grid[y][x] = 0;
+    }
+    else {
+      grid[y][x] = 1;
+    }
   }
 }
