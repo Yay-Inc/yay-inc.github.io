@@ -10,7 +10,7 @@
 // Where I got sky equirectangular photos: https://www.philohome.com/skycollec/skycollec.htm
 // 3d Models are from OpenGameArt.org and Free3D.com, but I edited them in blender
 
-const COMMONWEBCOLORS = [
+const COMMON_WEB_COLORS = [
   "white",
   "red",
   "blue",
@@ -32,13 +32,14 @@ const COMMONWEBCOLORS = [
   "gold"
 ];
 
+const CONTROLS = "E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nQ = Show who is online\nT = Chat (press Enter to send message)\nC = Camera Zoom\nZ/X = Raise/Lower FOV\nB = Cycle sky";
+
 let dirtImg;
 let skies = [];
 let skiesLightMaps = [];
 let grassModel;
 let treeModel;
 let rockModels = [];
-let jolModel;
 let titleModel;
 let font;
 
@@ -56,7 +57,11 @@ let my = {
   color: "black",
 };
 
-const YOUSIZE = 100;
+const RUN_SPEED = 20;
+const WALK_SPEED = 8;
+const JUMP_SPEED = -20;
+const MOVE_LERP = 0.1;
+const PLAYER_SIZE = 100;
 let speedX = 0;
 let speedY = 0;
 let speedZ = 0;
@@ -65,7 +70,8 @@ let cam;
 let cam2;
 let camMode = 0;
 let sensitivity = 1;
-const RENDIS = 20000;
+const ALT_CAMERA_DISTANCE = 2.5;
+const RENDER_DISTANCE = 20000;
 let guests;
 let shared;
 let lastFov = -1000;
@@ -189,8 +195,6 @@ async function setup() {
     leaves: await loadModel("assets/MapleTreeLeaves.obj"),
   };
 
-  jolModel = await loadModel("assets/jack-o-lantern.obj", true);
-
   font = await loadFont("assets/Genjibold.otf");
 
   createCanvas(windowWidth, windowHeight, WEBGL);
@@ -208,23 +212,23 @@ async function setup() {
   if (shared.sky === -1) {
     shared.sky = Math.floor(random(0, skies.length));
   }
-  for (let n of skiesLightMaps) {
-    n.filter(THRESHOLD, 0.9);
+  for (let map of skiesLightMaps) {
+    map.filter(THRESHOLD, 0.9);
   }
 
   // Generate world
-  world = new World(RENDIS);
+  world = new World(RENDER_DISTANCE);
   if (partyIsHost()) {
     shared.trees = world.trees;
     shared.rocks = world.rocks;
   }
 
-  my.color = COMMONWEBCOLORS[Math.floor(Math.random() * COMMONWEBCOLORS.length)];
+  my.color = COMMON_WEB_COLORS[Math.floor(Math.random() * COMMON_WEB_COLORS.length)];
   
   cam2 = createCamera();
   cam = createCamera();
-  cam.setPosition(my.x, my.y - YOUSIZE, my.z);
-  cam.perspective(my.fov, width / height, 5, RENDIS * 2);
+  cam.setPosition(my.x, my.y - PLAYER_SIZE, my.z);
+  cam.perspective(my.fov, width / height, 5, RENDER_DISTANCE * 2);
 
   background(120);
 }
@@ -326,7 +330,7 @@ function windowResized() {
 }
 
 function checkMoveInput() {
-  const ground = noise((my.x + RENDIS) * MOD, (my.z + RENDIS) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
+  const ground = noise((my.x + RENDER_DISTANCE) * MOD, (my.z + RENDER_DISTANCE) * MOD) * TERRAINHEIGHT - TERRAINHEIGHT / 2;
   
   let accelX = 0;
   let accelZ = 0;
@@ -334,24 +338,24 @@ function checkMoveInput() {
   if (!chatting) {
     // Forward and Back
     if (keyIsDown("w") || keyIsDown("W") || keyIsDown(UP_ARROW)) {
-      accelZ = -20;
+      accelZ = -RUN_SPEED;
   
     }
     else if (keyIsDown("s") || keyIsDown(DOWN_ARROW)) {
-      accelZ = 10;
+      accelZ = WALK_SPEED;
     }
 
     // Strafe
     if (keyIsDown("a") || keyIsDown(LEFT_ARROW)) {
-      accelX = -8;
+      accelX = -WALK_SPEED;
     }
     else if (keyIsDown("d") || keyIsDown(RIGHT_ARROW)) {
-      accelX = 8;
+      accelX = WALK_SPEED;
     }
     
     // Jump
     if (keyIsDown("Space") && my.y >= ground - 20) {
-      speedY = -20;
+      speedY = JUMP_SPEED;
     }
   }
   
@@ -359,15 +363,15 @@ function checkMoveInput() {
   let rotated = createVector(accelX, accelZ);
   rotated.rotate(my.pan - 90);
 
-  speedX = lerp(speedX, rotated.x, 0.1);
-  speedZ = lerp(speedZ, rotated.y, 0.1);
+  speedX = lerp(speedX, rotated.x, MOVE_LERP);
+  speedZ = lerp(speedZ, rotated.y, MOVE_LERP);
 
   // Check for collisions
-  let d = checkCollision(my.x, my.y, my.z, speedX, speedY, speedZ);
+  let fixedMovement = checkCollision(my.x, my.y, my.z, speedX, speedY, speedZ);
 
-  my.x += d.x;
-  my.y += d.y;
-  my.z += d.z;
+  my.x += fixedMovement.x;
+  my.y += fixedMovement.y;
+  my.z += fixedMovement.z;
 
   // Essentially gravity
   if (my.y < ground) {
@@ -380,11 +384,11 @@ function checkMoveInput() {
 }
 
 function updateCam() {
-  cam.setPosition(my.x, my.y - YOUSIZE, my.z);
+  cam.setPosition(my.x, my.y - PLAYER_SIZE, my.z);
   
   // Rotate camera based on mouse movements
   cam.pan(-movedX / 4 * sensitivity);
-  if (cam.centerY < 795 + my.y - YOUSIZE && movedY > 0 || cam.centerY > -795 + my.y - YOUSIZE && movedY < 0) {
+  if (cam.centerY < 795 + my.y - PLAYER_SIZE && movedY > 0 || cam.centerY > -795 + my.y - PLAYER_SIZE && movedY < 0) {
     cam.tilt(movedY / 4 * sensitivity);
   }
 
@@ -394,21 +398,21 @@ function updateCam() {
 
   // Update perspective
   if (keyIsDown("c") && !chatting) {
-    cam.perspective(15, width / height, 10, RENDIS * 2);
+    cam.perspective(15, width / height, 10, RENDER_DISTANCE * 2);
   }
   else {
-    cam.perspective(my.fov, width / height, 10, RENDIS * 2);
+    cam.perspective(my.fov, width / height, 10, RENDER_DISTANCE * 2);
   }
 
   if (camMode === 1) {
-    cam.move(0, 0, YOUSIZE * 2.5);
+    cam.move(0, 0, PLAYER_SIZE * ALT_CAMERA_DISTANCE);
     setCamera(cam);
   }
   else if (camMode === 2) {
     let cam2 = createCamera();
     cam2.set(cam);
     cam2.pan(180);
-    cam2.move(0, 0, YOUSIZE * 2.5);
+    cam2.move(0, 0, PLAYER_SIZE * ALT_CAMERA_DISTANCE);
     setCamera(cam2);
   }
   else {
@@ -443,35 +447,59 @@ function pauseScreen() {
 
   translate(0, 20, 0);
   textSize(10);
-  text("E/Double click = Pause/Resume\nMouse = Look around\nWASD/Arrow keys = Movement\nSpace bar = Jump\nQ = Show who is online\nT = Chat (press Enter to send message)\nC = Camera Zoom\nZ/X = Raise/Lower FOV\nB = Cycle sky", 0, 0);
+  text(CONTROLS, 0, 0);
 }
 
 function scene() {
   background(220);
   noStroke();
 
+  drawSky();  
+  drawTerrain();
+  drawFlora();
+  drawPeople();
+  drawWater();
+}
+
+function drawSky() {
   // Draw the sky
   push();
   texture(skies[shared.sky]);
-  sphere(RENDIS - 500, 100);
+  sphere(RENDER_DISTANCE - 500, 100);
   pop();
   
+  // Draw title
+  push();
+  fill(my.color);
+  rotateX(60);
+  translate(0, -RENDER_DISTANCE / 1.1, 0);
+  rotateX(-90);
+  scale(60);
+  model(titleModel);
+  pop();
+}
+
+function drawTerrain() {
   // Draw the ground
   push();
   texture(dirtImg);
   model(world.terrain);
   pop();
+  
+  // Draw rocks
+  for (let i = 0; i < shared.rocks.length; i++) {
+    let rock = shared.rocks[i];
+    
+    push();
+    translate(rock.x, rock.y, rock.z);
+    fill(rock.shade);
+    scale(100);
+    model(rockModels[rock.model]);
+    pop();
+  }
+}
 
-  // Draw title
-  push();
-  fill(my.color);
-  rotateX(60);
-  translate(0, -RENDIS / 1.1, 0);
-  rotateX(-90);
-  scale(60);
-  model(titleModel);
-  pop();
-
+function drawFlora() {
   // Draw trees
   for (let i = 0; i < shared.trees.length; i++) {
     let tree = shared.trees[i];
@@ -491,18 +519,6 @@ function scene() {
     
   }
 
-  // Draw rocks
-  for (let i = 0; i < shared.rocks.length; i++) {
-    let rock = shared.rocks[i];
-    
-    push();
-    translate(rock.x, rock.y, rock.z);
-    fill(rock.shade);
-    scale(100);
-    model(rockModels[rock.model]);
-    pop();
-  }
-
   // Draw grass
   for (let i = 0; i < world.grass.length; i++) {
     push();
@@ -511,56 +527,45 @@ function scene() {
     model(grassModel);
     pop();
   }
-  
-  // Draw people
-  if (keyIsDown("l") && !chatting) {
-    console.log(guests);
-  }
+}
 
+function drawPeople() {
   for (const guest of guests) {
     if (guest !== my || camMode !== 0) { 
       push();
       fill(guest.color);
       
       // Body
-      translate(guest.x, guest.y - YOUSIZE / 2, guest.z);
+      translate(guest.x, guest.y - PLAYER_SIZE / 2, guest.z);
       rotateY(-guest.pan + 180);
-      cylinder(YOUSIZE / 5, YOUSIZE);
+      cylinder(PLAYER_SIZE / 5, PLAYER_SIZE);
 
       // Head
-      translate(0, -YOUSIZE / 2, 0);
+      translate(0, -PLAYER_SIZE / 2, 0);
       rotateZ(-guest.tilt);
-      // box(YOUSIZE / 2);
-
-      // Jack-o-lantern head for halloween
-      push();
-      fill(248, 114, 23);
-      rotateX(180);
-      rotateY(90);
-      scale(0.5);
-      model(jolModel);
-      pop();
+      box(PLAYER_SIZE / 2);
 
       // Eyes
       fill(0);
-      translate(YOUSIZE / 4, 0, YOUSIZE / 8);
-      sphere(YOUSIZE / 16);
-      translate(0, 0, -YOUSIZE / 4);
-      sphere(YOUSIZE / 16);
+      translate(PLAYER_SIZE / 4, 0, PLAYER_SIZE / 8);
+      sphere(PLAYER_SIZE / 16);
+      translate(0, 0, -PLAYER_SIZE / 4);
+      sphere(PLAYER_SIZE / 16);
 
       pop();
     }
   }
+}
 
-  // Draw water
+function drawWater() {
   push();
   fill(0, 0, 255, 180);
   rotateX(-90);
-  plane(RENDIS * 2);
+  plane(RENDER_DISTANCE * 2);
   pop();
 
   // Add filter if under water
-  if (my.y - YOUSIZE > 0) {
+  if (my.y - PLAYER_SIZE > 0) {
     push();
     fill(0, 0, 255, 80);
     translate(cam.eyeX, cam.eyeY, cam.eyeZ);
@@ -574,7 +579,7 @@ function scene() {
     }
     else {
       rotateY(180);
-      translate(0, 0, YOUSIZE * 2.5 - 30);
+      translate(0, 0, PLAYER_SIZE * ALT_CAMERA_DISTANCE - 30);
       plane(10000);
     }
     pop();
@@ -585,6 +590,7 @@ function hud() {
   clearDepth();
 
   push();
+  // Setup for 2D drawing
   translate(cam.eyeX, cam.eyeY, cam.eyeZ);
   rotateY(-my.pan);
   rotateZ(my.tilt + 180);
@@ -594,23 +600,46 @@ function hud() {
   else {
     translate(200 / tan(my.fov / 2), 0, 0);
   }
-  
   rotateY(-90);
   rotateZ(180);
 
   noFill();
   stroke(255);
+
+  drawUtilities();
+
+  textAlign(CENTER);
+  textFont(font);
+  fill(255);
+
+  drawAlerts();
+
+  textAlign(LEFT);
+  fill(my.color);
+  textSize(15);
+
+  drawChat();
+  
+  fill(255);
+
+  if (keyIsDown("q")) {
+    drawOnlineList();
+  }
+
+  pop();
+}
+
+function drawUtilities() {
+  // Crosshair
   if (camMode === 0) {
     circle(0, 0, 10);
     if (keyIsDown("c") && !chatting) {
       circle(0, 0, 40);
     }
   }
+}
 
-  textAlign(CENTER);
-  textFont(font);
-  fill(255);
-
+function drawAlerts() {
   if (skyCollide) {
     translate(0, 60, 0);
     textSize(20);
@@ -624,11 +653,9 @@ function hud() {
     text(`FOV: ${my.fov}`, 0, 0);
     translate(-100, 60, 0);
   }
+}
 
-  textAlign(LEFT);
-  fill(my.color);
-  textSize(15);
-
+function drawChat() {
   if (chatting) {
     textAlign(CENTER);
     translate(0, 60, 0);
@@ -654,37 +681,36 @@ function hud() {
     translate(0, 18 * (i + 1), 0);
   }
   translate(width / 6, -height / 7.3, 0);
-  fill(255);
+}
 
-  if (keyIsDown("q")) {
-    translate(-width / 9, -height / 9, 0);
-    textSize(30);
-    text("Online:", 0, 0);
-    textSize(20);
-    translate(0, 30, 0);
-    fill(my.color);
-    text(`${my.color.charAt(0).toUpperCase() + my.color.slice(1)} (You)`, 0, 0);
-    for (const guest of guests) {
-      if (guest !== my) {
-        translate(0, 30, 0);
-        fill(guest.color);
-        text(guest.color.charAt(0).toUpperCase() + guest.color.slice(1), 0, 0);
-      }
+function drawOnlineList() {
+  translate(-width / 9, -height / 9, 0);
+  textSize(30);
+  text("Online:", 0, 0);
+  
+  textSize(20);
+  translate(0, 30, 0);
+  fill(my.color);
+  text(`${my.color.charAt(0).toUpperCase() + my.color.slice(1)} (You)`, 0, 0);
+  
+  for (const guest of guests) {
+    if (guest !== my) {
+      translate(0, 30, 0);
+      fill(guest.color);
+      text(guest.color.charAt(0).toUpperCase() + guest.color.slice(1), 0, 0);
     }
   }
-
-  pop();
 }
 
 function checkCollision(x, y, z, dx, dy, dz) {
-  let d = createVector(dx, dy, dz);
+  let fixedMovement = createVector(dx, dy, dz);
   
   // Check sky
-  if (dist(0, 0, 0, x, y, z) > RENDIS - YOUSIZE - 500) {
+  if (dist(0, 0, 0, x, y, z) > RENDER_DISTANCE - PLAYER_SIZE - 500) {
     
-    let v = createVector(dist(0, 0, 0, x, y, z) - (RENDIS - YOUSIZE - 500), 0);
-    v.setHeading(180 + createVector(x, z).heading());
-    d.add(createVector(v.x, 0, v.y));
+    let toInsideSky = createVector(dist(0, 0, 0, x, y, z) - (RENDER_DISTANCE - PLAYER_SIZE - 500), 0);
+    toInsideSky.setHeading(180 + createVector(x, z).heading());
+    fixedMovement.add(createVector(toInsideSky.x, 0, toInsideSky.y));
     
     skyCollide = true;
   }
@@ -692,5 +718,5 @@ function checkCollision(x, y, z, dx, dy, dz) {
     skyCollide = false;
   }
   
-  return d;
+  return fixedMovement;
 }

@@ -10,11 +10,11 @@
 - [Terrain Generation](08-terrain)
 - [Library Demo (p5.Collide2D)](09-collision)
 - [Randomized Art](10-art)
-
 - [Grid Demo](12-grid)
 
 ## Projects
 - [World](world)
 
 ## Fun
+- [Conway's Game of Life](conway)
 - [Bouncy Balls](bouncy-balls)
