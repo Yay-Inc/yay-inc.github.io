@@ -35,7 +35,7 @@ const DRAGON = [
 
 const PATTERNS = [{ code: GOSPER_GUN, x: 10, y: 10}, { code: DRAGON, x: -35, y: -25}];
 
-let CELL = 10;
+const CELL = 15;
 let grid;
 let paused = true;
 let erase = false;
@@ -156,7 +156,7 @@ function applyPattern(pattern) {
 }
 
 function keyPressed() {
-  if (key === "p") {
+  if (key === "p" || key === " ") {
     paused = !paused;
   }
   else if (key === "r") {
