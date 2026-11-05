@@ -1,10 +1,10 @@
 // Conway's Game of Life
 
-const grid = new Set();
+let grid = new Set();
 let paused = true;
 let erase = false;
 let center = [0, 0];
-let cellSizeSize = 20;
+let cellSize = 20;
 let fps = 60;
 
 async function setup() {
@@ -64,20 +64,25 @@ function drawLines() {
 function drawGrid() {
   fill(0);
   noStroke();
-  for (let cell of grid) {
+  //console.log(grid);
+  for (let cellStr of grid) {
+    let cell = cellStr.split(",");
+    console.log(cell);
     square((cell[0] + center[0]) * cellSize + width / 2, (cell[1] + center[1]) * cellSize + height / 2, cellSize);
   }
 }
 
 function updateGrid() {
-  const nextGrid = new Set();
+  let nextGrid = new Set();
 
-  for (let cell of grid) {
+  for (let cellStr of grid) {
+    let cell = cellStr.split(",");
+
     // count neighbours
     let neighbours = -1;
     for (let i = -1; i <= 1; i++) {
       for (let j = -1; j <= 1; j++) {
-        if (grid.has([cell[0] + i, cell[1] + j])) {
+        if (grid.has([cell[0] + i, cell[1] + j].toString())) {
           neighbours++;
         }
       }
@@ -85,24 +90,24 @@ function updateGrid() {
 
     // continue this cell
     if (neighbours === 3 || neighbours === 4) {
-      nextGrid.add(cell);
+      nextGrid.add(cell.toString());
     }
 
     // check around this cell
     for (let i = -1; i <= 1; i++) {
       for (let j = -1; j <= 1; j++) {
-        if (!grid.has([cell[0] + i, cell[1] + j]) && (i !== 0 && j !== 0)) {
+        if (!grid.has([cell[0] + i, cell[1] + j].toString()) && (i !== 0 && j !== 0)) {
           // check if this neighbour should come alive
           let neighbourNeighbours = 0;
           for (let n = -1; n <= 1; n++) {
             for (let m = -1; m <= 1; m++) {
-              if (grid.has([cell[0] + i + n, cell[1] + j + m])) {
+              if (grid.has([cell[0] + i + n, cell[1] + j + m].toString())) {
                 neighbourNeighbours++;
               }
             }
           }
           if (neighbourNeighbours === 3) {
-            nextGrid.add([cell[0] + i, cell[1] + j]);
+            nextGrid.add([cell[0] + i, cell[1] + j].toString());
           }
         }
       }
@@ -151,31 +156,31 @@ function keyPressed() {
 }
 
 function mousePressed() {
-  let x = Math.floor((mouseX - width) / cell) + center[0];
-  let y = Math.floor((mouseY - height) / cell) + center[1];
+  let x = Math.floor((mouseX - width / 2) / cellSize) + center[0];
+  let y = Math.floor((mouseY - height / 2) / cellSize) + center[1];
   
-  if (grid[y][x] === 1) {
-    grid[y][x] = 0;
+  if (grid.has([x, y].toString())) {
+    grid.delete([x, y].toString());
     erase = true;
   }
   else {
-    grid[y][x] = 1;
+    grid.add([x, y].toString());
     erase = false;
   }
 }
 
 function mouseDragged() {
-  let y = Math.floor(mouseY / CELL);
-  let x = Math.floor(mouseX / CELL);
-  let py = Math.floor(pmouseY / CELL);
-  let px = Math.floor(pmouseX / CELL);
+  let x = Math.floor((mouseX - width / 2) / cellSize) + center[0];
+  let y = Math.floor((mouseY - height / 2) / cellSize) + center[1];
+  let px = Math.floor((pmouseX - width / 2) / cellSize) + center[0];
+  let py = Math.floor((pmouseY - height / 2) / cellSize) + center[1];
   
   if (y !== py || x !== px) {
     if (erase) {
-      grid[y][x] = 0;
+      grid.delete([x, y].toString());
     }
     else {
-      grid[y][x] = 1;
+      grid.add([x, y].toString());
     }
   }
 }
