@@ -1,10 +1,41 @@
 // Conway's Game of Life
 
+const expander = new Set([
+  "-24,-1",
+  "-23,-1",
+  "-22,-1",
+  "-21,-1",
+  "-20,-1",
+  "-19,-1",
+  "-18,-1",
+  "-17,-1",
+  "-15,-1",
+  "-14,-1",
+  "-13,-1",
+  "-12,-1",
+  "-11,-1",
+  "-7,-1",
+  "-6,-1",
+  "-5,-1",
+  "2,-1",
+  "3,-1",
+  "4,-1",
+  "5,-1",
+  "6,-1",
+  "7,-1",
+  "8,-1",
+  "10,-1",
+  "11,-1",
+  "12,-1",
+  "13,-1",
+  "14,-1"
+]);
+
 let grid = new Set();
 let paused = true;
 let erase = false;
 let center = [0, 0];
-let cellSize = 20;
+let cellSize = 10;
 let fps = 60;
 
 async function setup() {
@@ -45,19 +76,21 @@ function draw() {
 }
 
 function drawLines() {
-  strokeWeight(1);
-  stroke(150);
+  if (cellSize > 5) {
+    strokeWeight(1);
+    stroke(150);
 
-  // vertical lines
-  for (let i = 0; i < Math.floor(width / 2 / cellSize); i++) {
-    line(i * cellSize + width / 2, 0, i * cellSize + width / 2, height);
-    line(-i * cellSize + width / 2, 0, -i * cellSize + width / 2, height);
-  }
-  
-  // horizontal lines
-  for (let i = 0; i < Math.floor(height / 2 / cellSize); i++) {
-    line(0, i * cellSize + height / 2, width, i * cellSize + height / 2);
-    line(0, -i * cellSize + height / 2, width, -i * cellSize + height / 2);
+    // vertical lines
+    for (let i = 0; i <= Math.floor(width / 2 / cellSize); i++) {
+      line(i * cellSize + width / 2, 0, i * cellSize + width / 2, height);
+      line(-i * cellSize + width / 2, 0, -i * cellSize + width / 2, height);
+    }
+    
+    // horizontal lines
+    for (let i = 0; i <= Math.floor(height / 2 / cellSize); i++) {
+      line(0, i * cellSize + height / 2, width, i * cellSize + height / 2);
+      line(0, -i * cellSize + height / 2, width, -i * cellSize + height / 2);
+    }
   }
 }
 
@@ -67,7 +100,9 @@ function drawGrid() {
   //console.log(grid);
   for (let cellStr of grid) {
     let cell = cellStr.split(",");
-    console.log(cell);
+    cell[0] = Number(cell[0]);
+    cell[1] = Number(cell[1]);
+
     square((cell[0] + center[0]) * cellSize + width / 2, (cell[1] + center[1]) * cellSize + height / 2, cellSize);
   }
 }
@@ -77,6 +112,8 @@ function updateGrid() {
 
   for (let cellStr of grid) {
     let cell = cellStr.split(",");
+    cell[0] = Number(cell[0]);
+    cell[1] = Number(cell[1]);
 
     // count neighbours
     let neighbours = -1;
@@ -89,7 +126,7 @@ function updateGrid() {
     }
 
     // continue this cell
-    if (neighbours === 3 || neighbours === 4) {
+    if (neighbours === 2 || neighbours === 3) {
       nextGrid.add(cell.toString());
     }
 
@@ -156,31 +193,48 @@ function keyPressed() {
 }
 
 function mousePressed() {
-  let x = Math.floor((mouseX - width / 2) / cellSize) + center[0];
-  let y = Math.floor((mouseY - height / 2) / cellSize) + center[1];
-  
-  if (grid.has([x, y].toString())) {
-    grid.delete([x, y].toString());
-    erase = true;
-  }
-  else {
-    grid.add([x, y].toString());
-    erase = false;
+  if (!mouseButton.center) {
+    let x = Math.floor((mouseX - width / 2) / cellSize) - center[0];
+    let y = Math.floor((mouseY - height / 2) / cellSize) - center[1];
+    
+    if (grid.has([x, y].toString())) {
+      grid.delete([x, y].toString());
+      erase = true;
+    }
+    else {
+      grid.add([x, y].toString());
+      erase = false;
+    }
   }
 }
 
 function mouseDragged() {
-  let x = Math.floor((mouseX - width / 2) / cellSize) + center[0];
-  let y = Math.floor((mouseY - height / 2) / cellSize) + center[1];
-  let px = Math.floor((pmouseX - width / 2) / cellSize) + center[0];
-  let py = Math.floor((pmouseY - height / 2) / cellSize) + center[1];
-  
-  if (y !== py || x !== px) {
-    if (erase) {
-      grid.delete([x, y].toString());
+  if (mouseButton.center) {
+    center[0] += Math.round(movedX / cellSize);
+    center[1] += Math.round(movedY / cellSize);
+  }
+  else {
+    let x = Math.floor((mouseX - width / 2) / cellSize) - center[0];
+    let y = Math.floor((mouseY - height / 2) / cellSize) - center[1];
+    let px = Math.floor((pmouseX - width / 2) / cellSize) - center[0];
+    let py = Math.floor((pmouseY - height / 2) / cellSize) - center[1];
+    
+    if (y !== py || x !== px) {
+      if (erase) {
+        grid.delete([x, y].toString());
+      }
+      else {
+        grid.add([x, y].toString());
+      }
     }
-    else {
-      grid.add([x, y].toString());
-    }
+  }
+}
+
+function mouseWheel(event) {
+  if (event.delta > 0) {
+    cellSize += 1;
+  }
+  else if (cellSize > 1) {
+    cellSize -= 1;
   }
 }
