@@ -133,7 +133,7 @@ function updateGrid() {
     // check around this cell
     for (let i = -1; i <= 1; i++) {
       for (let j = -1; j <= 1; j++) {
-        if (!grid.has([cell[0] + i, cell[1] + j].toString()) && (i !== 0 && j !== 0)) {
+        if (!grid.has([cell[0] + i, cell[1] + j].toString()) && !(i === 0 && j === 0)) {
           // check if this neighbour should come alive
           let neighbourNeighbours = 0;
           for (let n = -1; n <= 1; n++) {
