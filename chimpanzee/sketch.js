@@ -32,28 +32,40 @@ async function setup() {
   clearGrid();
 
   textAlign(CENTER, CENTER);
+  rectMode(CENTER);
+  
   noStroke();
 }
 
 function draw() {
   background(COLOURSCHEME.blue);
-  textSize(cellSize);
 
   if (mode === "start") {
-    fill("pink");
-    text("ARE YOU SMARTER THAN A CHIMPANZEE?", 0, 0, width, height);
+    fill(COLOURSCHEME.yellow);
+    text("ARE YOU SMARTER THAN A CHIMPANZEE?", width / 2, height / 2, width, height);
+  }
+  else if (mode === "game over") {
+    fill(COLOURSCHEME.yellow);
+    text("GAME OVER", width / 2, height / 3);
+    text("Final Score: " + String(level), width / 2, height * 2 / 3);
+    textSize(cellSize * 0.3);
+    fill(COLOURSCHEME.orange);
+    text("(click to try again)", width / 2, height - cellSize);
+    textSize(cellSize * 0.9);
   }
   else if (mode === "message") {
-    fill("pink");
+    fill(COLOURSCHEME.yellow);
     text(message, width / 2, height / 4);
     text(String(level) + " squares", width / 2, height / 2);
     text("Strike " + String(strikes) + " of 3", width / 2, height * 3 / 4);
   }
   else if (mode === "test" || mode === "view") {
+    updateGrid();
     drawGrid();
-    fill("pink");
-    text(String(level) + " squares", width / 2, cellSize / 2);
-    text("Strike " + String(strikes) + " of 3", width / 2, height - cellSize / 2);
+    fill(COLOURSCHEME.yellow);
+    textSize(cellSize * 0.9);
+    text(String(level) + " squares", width / 2, (cellSize + heightOffset) / 2);
+    text("Strike " + String(strikes) + " of 3", width / 2, height - (cellSize + heightOffset) / 2);
   }
 }
 
@@ -63,7 +75,7 @@ function clearGrid() {
   for (let y = 0; y < ROWS; y++) {
     let row = [];
     for (let x = 0; x < COLUMNS; x++) {
-      row.push(0);
+      row.push({ value: 0, hovered: 0 });
     }
     grid.push(row);
   }
@@ -78,8 +90,8 @@ function genLevel() {
       let y = Math.floor(random(0, ROWS));
       let x = Math.floor(random(0, COLUMNS));
 
-      if (grid[y][x] === 0) {
-        grid[y][x] = i;
+      if (grid[y][x].value === 0) {
+        grid[y][x].value = i;
         break;
       }
     }
@@ -89,21 +101,22 @@ function genLevel() {
 function drawGrid() {
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLUMNS; x++) {
-      if (grid[y][x] === 0) {
-        fill("purple");
-        stroke("purple");
+      if (grid[y][x].value === 0) {
+        fill(lerpColor(color(COLOURSCHEME.blue), color(COLOURSCHEME.green), grid[y][x].hovered));
+        stroke(lerpColor(color(COLOURSCHEME.blue), color(COLOURSCHEME.green), grid[y][x].hovered));
       }
       else {
-        fill("pink");
-        stroke("pink");
+        fill(lerpColor(color(COLOURSCHEME.yellow), color(COLOURSCHEME.orange), grid[y][x].hovered));
+        stroke(lerpColor(color(COLOURSCHEME.yellow), color(COLOURSCHEME.orange), grid[y][x].hovered));
       }
       
-      square(x * cellSize + cellSize + widthOffset, y * cellSize + cellSize + heightOffset, cellSize);
+      square(x * cellSize + cellSize * 1.5 + widthOffset, y * cellSize + cellSize * 1.5 + heightOffset, cellSize + cellSize * 0.1 * grid[y][x].hovered, cellSize * 0.2);
       
       noStroke();
-      if (grid[y][x] !== 0 && mode === "view") {
-        fill("blue");
-        text(String(grid[y][x]), x * cellSize + cellSize * 1.5 + widthOffset, y * cellSize + cellSize * 1.5 + heightOffset);
+      if (grid[y][x].value !== 0 && mode === "view") {
+        fill(COLOURSCHEME.red);
+        textSize(cellSize * 0.9 + cellSize * 0.1 * grid[y][x].hovered);
+        text(String(grid[y][x].value), x * cellSize + cellSize * 1.5 + widthOffset, y * cellSize + cellSize * 1.5 + heightOffset);
       }
     }
   }
@@ -112,27 +125,30 @@ function drawGrid() {
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
   cellSize = Math.min(width / (COLUMNS + 2), height / (ROWS + 2));
+  textSize(cellSize * 0.9);
   widthOffset = (width - cellSize * (COLUMNS + 2)) / 2;
   heightOffset = (height - cellSize * (ROWS + 2)) / 2;
 }
 
 function mousePressed() {
-  if (mode === "start") {
+  if (mode === "start" || mode === "game over") {
     mode = "message";
     message = "Starting...";
+    level = 4;
+    nextNum = 1;
   }
   else if (mode === "message") {
     mode = "view";
     genLevel();
   }
-  else if ((mode === "test" || mode === "view") && mouseX >=  widthOffset && mouseX <= width - widthOffset && mouseY >=  heightOffset && mouseY <= height - heightOffset) {
+  else if ((mode === "test" || mode === "view") && mouseX >= widthOffset + cellSize && mouseX <= width - widthOffset - cellSize && mouseY >= heightOffset + cellSize && mouseY <= height - heightOffset - cellSize) {
     mode = "test";
 
     let spotY = Math.floor((mouseY - heightOffset) / cellSize - 1);
     let spotX = Math.floor((mouseX - widthOffset) / cellSize - 1);
-    console.log(String(spotX) + String(spotY));
-    if (grid[spotY][spotX] === nextNum) {
-      grid[spotY][spotX] = 0;
+    
+    if (grid[spotY][spotX].value === nextNum) {
+      grid[spotY][spotX].value = 0;
 
       if (nextNum === level) {
         level++;
@@ -149,12 +165,31 @@ function mousePressed() {
       nextNum = 1;
       mode = "message";
       if (strikes === 3) {
-        message = "Game Over.";
-        level = 4;
+        mode = "game over";
       }
       else {
         message = "Wrong.";
       }
     }
+  }
+}
+
+function updateGrid() {
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLUMNS; x++) {
+      if (grid[y][x].hovered > 0) {
+        grid[y][x].hovered -= 0.1;
+      }
+      else {
+        grid[y][x].hovered = 0;
+      }
+    }
+  }
+  
+  if (mouseX >= widthOffset + cellSize && mouseX <= width - widthOffset - cellSize && mouseY >= heightOffset + cellSize && mouseY <= height - heightOffset - cellSize) {
+    let spotY = Math.floor((mouseY - heightOffset) / cellSize - 1);
+    let spotX = Math.floor((mouseX - widthOffset) / cellSize - 1);
+
+    grid[spotY][spotX].hovered = 1;
   }
 }
