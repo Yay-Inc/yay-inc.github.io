@@ -13,6 +13,8 @@ const COLOURSCHEME = {
   red: "#e76f51",
 };
 
+let font;
+
 const COLUMNS = 10;
 const ROWS = 6;
 let cellSize;
@@ -22,8 +24,17 @@ let heightOffset;
 let level = 4;
 let nextNum = 1;
 let strikes = 0;
+let difficulty;
 let mode = "start";
 let message;
+
+let buttons = [
+  { text: "No Brainer", time: Infinity, hovered: 0 },
+  { text: "Easy", time: 10000, hovered: 0 },
+  { text: "Challenge", time: 5000, hovered: 0 },
+  { text: "Impossible", time: 2000, hovered: 0 },
+];
+let buttonSize;
 
 async function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -31,6 +42,8 @@ async function setup() {
 
   clearGrid();
 
+  font = await loadFont("assets/DarumadropOne-Regular.ttf");
+  textFont(font);
   textAlign(CENTER, CENTER);
   rectMode(CENTER);
   
@@ -42,11 +55,21 @@ function draw() {
 
   if (mode === "start") {
     fill(COLOURSCHEME.yellow);
+    textSize(cellSize * 1.5);
     text("ARE YOU SMARTER THAN A CHIMPANZEE?", width / 2, height / 2, width, height);
+  }
+  else if (mode === "menu") {
+    fill(COLOURSCHEME.yellow);
+    textSize(cellSize * 1.2);
+    text("Choose a difficulty:", width / 2, height / 3);
+    updateButtons();
+    drawButtons();
   }
   else if (mode === "game over") {
     fill(COLOURSCHEME.yellow);
+    textSize(cellSize * 1.5);
     text("GAME OVER", width / 2, height / 3);
+    textSize(cellSize * 0.9);
     text("Final Score: " + String(level), width / 2, height * 2 / 3);
     textSize(cellSize * 0.3);
     fill(COLOURSCHEME.orange);
@@ -55,9 +78,14 @@ function draw() {
   }
   else if (mode === "message") {
     fill(COLOURSCHEME.yellow);
+    textSize(cellSize * 1.2);
     text(message, width / 2, height / 4);
+    textSize(cellSize * 0.9);
     text(String(level) + " squares", width / 2, height / 2);
-    text("Strike " + String(strikes) + " of 3", width / 2, height * 3 / 4);
+    text("Strike " + String(strikes) + " of 3", width / 2, height * 2 / 3);
+    textSize(cellSize * 0.3);
+    fill(COLOURSCHEME.orange);
+    text("(click to start " + String(difficulty / 1000) + " second timer)", width / 2, height - cellSize);
   }
   else if (mode === "test" || mode === "view") {
     updateGrid();
@@ -110,7 +138,7 @@ function drawGrid() {
         stroke(lerpColor(color(COLOURSCHEME.yellow), color(COLOURSCHEME.orange), grid[y][x].hovered));
       }
       
-      square(x * cellSize + cellSize * 1.5 + widthOffset, y * cellSize + cellSize * 1.5 + heightOffset, cellSize + cellSize * 0.1 * grid[y][x].hovered, cellSize * 0.2);
+      square(x * cellSize + cellSize * 1.5 + widthOffset, y * cellSize + cellSize * 1.5 + heightOffset, cellSize * 0.9 + cellSize * 0.1 * grid[y][x].hovered, cellSize * 0.2);
       
       noStroke();
       if (grid[y][x].value !== 0 && mode === "view") {
@@ -122,16 +150,37 @@ function drawGrid() {
   }
 }
 
+function drawButtons() {
+  for (let i = 0; i < buttons.length; i++) {
+    fill(lerpColor(color(COLOURSCHEME.yellow), color(COLOURSCHEME.orange), buttons[i].hovered));
+    square(i * buttonSize + buttonSize / 2 + widthOffset, height * 2 / 3, buttonSize * 0.9 + buttonSize * 0.1 * buttons[i].hovered, buttonSize * 0.2);
+
+    fill(COLOURSCHEME.red);
+    textSize(buttonSize * 0.16 + buttonSize * 0.01 * buttons[i].hovered);
+    text(buttons[i].text, i * buttonSize + buttonSize / 2 + widthOffset, height * 2 / 3 - buttonSize / 6);
+    textSize(buttonSize * 0.1 + buttonSize * 0.01 * buttons[i].hovered);
+    text(String(buttons[i].time / 1000) + " seconds", i * buttonSize + buttonSize / 2 + widthOffset, height * 2 / 3 + buttonSize / 6);
+  }
+}
+
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
   cellSize = Math.min(width / (COLUMNS + 2), height / (ROWS + 2));
   textSize(cellSize * 0.9);
   widthOffset = (width - cellSize * (COLUMNS + 2)) / 2;
   heightOffset = (height - cellSize * (ROWS + 2)) / 2;
+  buttonSize = (width - widthOffset * 2) / buttons.length;
 }
 
 function mousePressed() {
   if (mode === "start" || mode === "game over") {
+    mode = "menu";
+  }
+  else if (mode === "menu" && mouseX >= widthOffset && mouseX <= width - widthOffset && mouseY >= height * 2 / 3 - buttonSize / 2 && mouseY <= height * 2 / 3 + buttonSize / 2) {
+    let spotX = Math.floor((mouseX - widthOffset) / buttonSize);
+
+    difficulty = buttons[spotX].time;
+    
     mode = "message";
     message = "Starting...";
     level = 4;
@@ -191,5 +240,22 @@ function updateGrid() {
     let spotX = Math.floor((mouseX - widthOffset) / cellSize - 1);
 
     grid[spotY][spotX].hovered = 1;
+  }
+}
+
+function updateButtons() {
+  for (let i = 0; i < buttons.length; i++) {
+    if (buttons[i].hovered > 0) {
+      buttons[i].hovered -= 0.1;
+    }
+    else {
+      buttons[i].hovered = 0;
+    }
+  }
+  
+  if (mouseX >= widthOffset && mouseX <= width - widthOffset && mouseY >= height * 2 / 3 - buttonSize / 2 && mouseY <= height * 2 / 3 + buttonSize / 2) {
+    let spotX = Math.floor((mouseX - widthOffset) / buttonSize);
+
+    buttons[spotX].hovered = 1;
   }
 }
