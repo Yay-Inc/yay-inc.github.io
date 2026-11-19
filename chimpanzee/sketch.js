@@ -14,6 +14,7 @@ const COLOURSCHEME = {
 };
 
 let font;
+let missClickGif;
 
 const COLUMNS = 10;
 const ROWS = 6;
@@ -21,10 +22,15 @@ let cellSize;
 let grid;
 let widthOffset;
 let heightOffset;
+
 let level = 4;
 let nextNum = 1;
 let strikes = 0;
+let missClick = false;
+
 let difficulty;
+let timerStart;
+
 let mode = "start";
 let message;
 
@@ -42,11 +48,13 @@ async function setup() {
 
   clearGrid();
 
+  missClickGif = await loadImage("assets/missclick.gif");
+
   font = await loadFont("assets/DarumadropOne-Regular.ttf");
   textFont(font);
   textAlign(CENTER, CENTER);
   rectMode(CENTER);
-  
+  imageMode(CENTER);
   noStroke();
 }
 
@@ -75,6 +83,11 @@ function draw() {
     fill(COLOURSCHEME.orange);
     text("(click to try again)", width / 2, height - cellSize);
     textSize(cellSize * 0.9);
+
+    if (missClick) {
+      image(missClickGif, width * 3 / 4, height / 2);
+      image(missClickGif, width / 4, height / 2);
+    }
   }
   else if (mode === "message") {
     fill(COLOURSCHEME.yellow);
@@ -86,8 +99,19 @@ function draw() {
     textSize(cellSize * 0.3);
     fill(COLOURSCHEME.orange);
     text("(click to start " + String(difficulty / 1000) + " second timer)", width / 2, height - cellSize);
+
+    if (missClick) {
+      image(missClickGif, width * 3 / 4, height / 2);
+      image(missClickGif, width / 4, height / 2);
+    }
   }
   else if (mode === "test" || mode === "view") {
+    if (timerStart + difficulty < millis()) {
+      mode = "test";
+    }
+    if (mode === "view") {
+      drawTimer();
+    }
     updateGrid();
     drawGrid();
     fill(COLOURSCHEME.yellow);
@@ -143,7 +167,12 @@ function drawGrid() {
       noStroke();
       if (grid[y][x].value !== 0 && mode === "view") {
         fill(COLOURSCHEME.red);
-        textSize(cellSize * 0.9 + cellSize * 0.1 * grid[y][x].hovered);
+        if (grid[y][x].value > 9) {
+          textSize(cellSize * 0.7 + cellSize * 0.1 * grid[y][x].hovered);
+        }
+        else {
+          textSize(cellSize * 0.9 + cellSize * 0.1 * grid[y][x].hovered);
+        }
         text(String(grid[y][x].value), x * cellSize + cellSize * 1.5 + widthOffset, y * cellSize + cellSize * 1.5 + heightOffset);
       }
     }
@@ -160,6 +189,36 @@ function drawButtons() {
     text(buttons[i].text, i * buttonSize + buttonSize / 2 + widthOffset, height * 2 / 3 - buttonSize / 6);
     textSize(buttonSize * 0.1 + buttonSize * 0.01 * buttons[i].hovered);
     text(String(buttons[i].time / 1000) + " seconds", i * buttonSize + buttonSize / 2 + widthOffset, height * 2 / 3 + buttonSize / 6);
+  }
+}
+
+function drawTimer() {
+  let progress = (timerStart + difficulty - millis()) / difficulty;
+  if (progress > 0 && progress !== Infinity) {
+    let length = (width + height) * progress;
+    rectMode(CORNER);
+    fill(COLOURSCHEME.green);
+    noStroke();
+
+    if (length >= width / 2) {
+      rect(0, 0, width, cellSize * 0.1);
+      if (length >= width / 2 + height) {
+        rect(0, 0, cellSize * 0.1, height);
+        rect(width, 0, -cellSize * 0.1, height);
+        
+        rect(0, height, length - height - width / 2, -cellSize * 0.1);
+        rect(width, height, -(length - height - width / 2), -cellSize * 0.1);
+      }
+      else {
+        rect(0, 0, cellSize * 0.1, length - width / 2);
+        rect(width, 0, -cellSize * 0.1, length - width / 2);
+      }
+    }
+    else {
+      rect(width / 2 - length, 0, length * 2, cellSize * 0.1);
+    }
+    
+    rectMode(CENTER);
   }
 }
 
@@ -189,6 +248,7 @@ function mousePressed() {
   else if (mode === "message") {
     mode = "view";
     genLevel();
+    timerStart = millis();
   }
   else if ((mode === "test" || mode === "view") && mouseX >= widthOffset + cellSize && mouseX <= width - widthOffset - cellSize && mouseY >= heightOffset + cellSize && mouseY <= height - heightOffset - cellSize) {
     mode = "test";
@@ -198,6 +258,7 @@ function mousePressed() {
     
     if (grid[spotY][spotX].value === nextNum) {
       grid[spotY][spotX].value = 0;
+      missClick = false;
 
       if (nextNum === level) {
         level++;
@@ -213,12 +274,14 @@ function mousePressed() {
       strikes++;
       nextNum = 1;
       mode = "message";
-      if (strikes === 3) {
+      if (strikes >= 3) {
         mode = "game over";
       }
       else {
         message = "Wrong.";
       }
+      
+      missClick = grid[spotY][spotX].value === 0;
     }
   }
 }

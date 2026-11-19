@@ -15,6 +15,7 @@
 
 ## Projects
 - [World](world)
+- [Grid-based Memory Games](chimpanzee)
 
 ## Fun
 - [Conway's Game of Life](conway)
