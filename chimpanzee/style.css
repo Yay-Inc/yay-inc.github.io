@@ -1,6 +1,34 @@
+@font-face {
+  font-family: myFont;
+  src: url(assets/DarumadropOne-Regular.ttf);
+}
+
 html, body {
   margin: 0;
   padding: 0;
+}
+
+nav {
+  margin: 0;
+  padding-left: 3vw;
+  height: 10vh;
+
+  display: flex;
+  align-items: center;
+  column-gap: 4vw;
+
+  background-color: #e9c46a;
+
+  a {
+    text-decoration: none;
+    font-family: myFont;
+    font-size: min(8vw, 6vh);
+    color: #e76f51;
+    transition: font-size 0.1s ease-in-out;
+  }
+  a:hover {
+    font-size: min(8vw, 6.5vh)
+  }
 }
 
 canvas {

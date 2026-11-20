@@ -37,8 +37,8 @@ let message;
 let buttons = [
   { text: "No Brainer", time: Infinity, hovered: 0 },
   { text: "Easy", time: 10000, hovered: 0 },
-  { text: "Challenge", time: 5000, hovered: 0 },
-  { text: "Impossible", time: 2000, hovered: 0 },
+  { text: "Challenge", time: 4000, hovered: 0 },
+  { text: "Impossible", time: 1500, hovered: 0 },
 ];
 let buttonSize;
 
@@ -64,7 +64,7 @@ function draw() {
   if (mode === "start") {
     fill(COLOURSCHEME.yellow);
     textSize(cellSize * 1.5);
-    text("ARE YOU SMARTER THAN A CHIMPANZEE?", width / 2, height / 2, width, height);
+    text("ARE YOU SMARTER THAN A CHIMPANZEE?", width / 2, height / 2, width * 0.9, height);
   }
   else if (mode === "menu") {
     fill(COLOURSCHEME.yellow);
@@ -223,7 +223,7 @@ function drawTimer() {
 }
 
 function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
+  resizeCanvas(windowWidth, windowHeight * 0.9);
   cellSize = Math.min(width / (COLUMNS + 2), height / (ROWS + 2));
   textSize(cellSize * 0.9);
   widthOffset = (width - cellSize * (COLUMNS + 2)) / 2;
@@ -239,7 +239,7 @@ function mousePressed() {
     let spotX = Math.floor((mouseX - widthOffset) / buttonSize);
 
     difficulty = buttons[spotX].time;
-    
+    missClick = false;
     mode = "message";
     message = "Starting...";
     level = 4;
@@ -276,6 +276,7 @@ function mousePressed() {
       mode = "message";
       if (strikes >= 3) {
         mode = "game over";
+        strikes = 0;
       }
       else {
         message = "Wrong.";
