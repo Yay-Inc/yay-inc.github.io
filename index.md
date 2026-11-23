@@ -12,6 +12,7 @@
 - [Randomized Art](10-art)
 - [Grid Demo](12-grid)
 - [Character in Grid](15-character)
+- [Walker OOP](18-walker)
 
 ## Projects
 - [World](world)

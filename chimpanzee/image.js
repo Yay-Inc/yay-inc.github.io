@@ -308,6 +308,8 @@ function mousePressed() {
 
     // objects in buttons include their time as a property
     difficulty = buttons[spotX].time;
+
+    scores = [];
     
     mode = "message";
     message = "Starting...";
