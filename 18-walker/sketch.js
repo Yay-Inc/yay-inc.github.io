@@ -49,3 +49,11 @@ function draw() {
 function mousePressed() {
   walkers.push(new Walker(mouseX, mouseY));
 }
+
+function keyPressed() {
+  if (key === "s") {
+    for (let i = 0; i < 100; i++) {
+      walkers.push(new Walker(mouseX, mouseY));
+    }
+  }
+}
